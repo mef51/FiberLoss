@@ -1,0 +1,3 @@
+* 'nerve conduction models'
+* i_D(x) --> depends on model of neuron
+* diffusion of current in a medium (lightning strike)!

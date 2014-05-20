@@ -28,32 +28,29 @@ nerve = {
     17 : 1/17.0
 }
 
-numberOfFibers = 187 # some number divisible by len(nerve)
+totalNumFibers = 187 # some number divisible by len(nerve)
 
 def r(n):
     return 1.0
 
 rho_e = 2
-fibreDiameter = 0.5
+fibreDiameter = 10 # µm
 
 # stuff
 axonalDiameter = 0.76 * fibreDiameter + 1.37e-7
-n = 12
 
-def n(diameter):
-    return nerve[diameter] * numberOfFibers
+# `n`
+def numFibers(diameter):
+    return nerve[diameter] * totalNumFibers
 
-diam = 17
-print "There are " + str(n(diam)) + " nerve fibers of diameter " + str(diam) + "µm in the bundle of " + str(numberOfFibers)
-
-# L
+# `L`
 def internodalLength(D):
     if D <= 1.2e-5:
         return 102*D + 7.15e-5
     else:
         return 4.68e-4 * np.log(D / 9.74e-7)
 
-# Ge
+# `Ge`
 def externalConductance(n):
     return 1 / (4 * np.pi * r(n) * rho_e)
 
@@ -66,5 +63,13 @@ def i_D(x):
     return -1
 
 def InD(x):
-    n * e(fibreDiameter) * i_D(x)
+    numFibers(fibreDiameter) * e(fibreDiameter) * i_D(x)
 
+
+#############
+# Integrate
+dt = 0.05 # ms
+simulationTime = 10 # ms
+timeLine = np.arange(0, simulationTime + dt, dt)
+for i, t in enumerate(timeLine):
+    print t
