@@ -104,9 +104,11 @@ for i in range(1, 10):
             # plot a frame of the graph
             voltageLine, currentLine = pylab.plot(timeLine[:i+1], Vm[:i+1], 'b-', timeLine[:i+1], I[:i+1], 'g-')
             pylab.legend([voltageLine, currentLine], ["Response from cell", "Impulse current"])
-            pylab.title('Effective Current ' + "{:6.3f}".format(effectiveCurrent) + u' µA')
+            pylab.title('Effective Current ' + "{:6.3f}".format(effectiveCurrent) + u' µA/cm^2')
             pylab.ylabel('Membrane Potential (mV)')
             pylab.xlabel('Time (ms)')
+            pylab.ylim([-20,120])
+            pylab.xlim([0,60])
             images.append((voltageLine, currentLine))
 
 anim = ArtistAnimation(animationFigure, images, interval = 50, blit = True)
