@@ -74,20 +74,24 @@ def createCurrent(distance, stimulusCurrent, t1=5, t2=30):
 # Main loop
 animationFigure = pylab.figure(figsize=(16, 9))
 images = []
-for k in range(1, 10):
-    pylab.subplot(3, 3, k)
+axons = []
+stimulusCurrent = 10. # uA. the current applied at the surface
 
-    # create a pulsey current
-    distance = k*0.1 # cm. The distance between the axon and the current
-    stimulusCurrent = 10. # uA. the current applied at the surface
-    I = createCurrent(distance, stimulusCurrent)
+# create the axons for each plot
+for i in range(0, 9):
+    distance = (i+1)*0.1 # cm. The distance between the axon and the current
+    axons.append(AxonNode(distance))
 
-    # for the plot's title
-    effectiveCurrent = stimulusCurrent / (2*np.pi * distance**2) # uA/cm2. the current that reaches the axon.
+for i in range(1, len(timeLine)):
+    for k in range(1, 10):
+        pylab.subplot(3, 3, k)
+        axon = axons[k-1]
+        # create a pulsey current
+        I = createCurrent(axon.distance, stimulusCurrent)
 
-    axon = AxonNode(distance) # Create an axon DUN DUN DUNNN
+        # for the plot's title
+        effectiveCurrent = stimulusCurrent / (2*np.pi * axon.distance**2) # uA/cm2. the current that reaches the axon.
 
-    for i in range(1, len(timeLine)):
         sodiumConductance    = axon.params["gBarNa"] * (axon.m**3) * axon.h
         potassiumConductance = axon.params["gBarK"]  * (axon.n**4)
         leakageConductance   = axon.params["gBarL"]
@@ -107,7 +111,7 @@ for k in range(1, 10):
         if i % 25 == 0:
             # update status every 25 frames (about a second of video).
             # don't wanna print a lot cuz it slows things down
-            # print "Time: " + str(i*dt) + ", Saving frame " + str(i)
+            print "Time: " + str(i*dt)
 
             # plot a frame of the graph
             voltageLine, currentLine = pylab.plot(timeLine[:i+1], axon.Vm[:i+1], 'b-', timeLine[:i+1], I[:i+1], 'g-')
@@ -119,7 +123,7 @@ for k in range(1, 10):
             pylab.xlim([0,60])
             images.append((voltageLine, currentLine))
 
-anim = ArtistAnimation(animationFigure, images, interval = 50, blit = True)
+anim = ArtistAnimation(animationFigure, images, interval = 1, blit = True)
 print "Saving animation..."
 pylab.show()
 # anim.save("model.mp4", dpi=200, extra_args=['-vcodec', 'libx264'])
