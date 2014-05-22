@@ -13,19 +13,19 @@ class AxonNode:
     """A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952"""
     def __init__(self):
         # Potassium (K) Channel
-        self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10) - 1) if v != 10 else 0.1)
-        self.betaN  = lambda v: 0.125 * np.exp(-v/80)
-        self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
+        alphaN = self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10) - 1) if v != 10 else 0.1)
+        betaN = self.betaN  = lambda v: 0.125 * np.exp(-v/80)
+        nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         # Sodium (Na) Channel (activating)
-        self.alphaM = np.vectorize(lambda v: 0.1*(25-v) / (np.exp((25-v)/10) - 1) if v!= 25 else 1)
-        self.betaM = lambda v: 4 * np.exp(-v/18)
-        self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
+        alphaM = self.alphaM = np.vectorize(lambda v: 0.1*(25-v) / (np.exp((25-v)/10) - 1) if v!= 25 else 1)
+        betaM = self.betaM = lambda v: 4 * np.exp(-v/18)
+        mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 
         # Sodium (Na) Channel (inactivating)
-        self.alphaH = lambda v: 0.07 * np.exp(-v/20)
-        self.betaH  = lambda v: 1/(np.exp((30-v)/10) + 1)
-        self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
+        alphaH = self.alphaH = lambda v: 0.07 * np.exp(-v/20)
+        betaH = self.betaH  = lambda v: 1/(np.exp((30-v)/10) + 1)
+        hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
@@ -40,24 +40,9 @@ class AxonNode:
         }
 
         self.Vm    = [params["restingVoltage"]] # The axon node's membrane potential
-        self.m     = mInf(restingVoltage)
-        self.h     = hInf(restingVoltage)
-        self.n     = nInf(restingVoltage)
-
-# Potassium (K) Channel
-alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10) - 1) if v != 10 else 0.1)
-betaN  = lambda v: 0.125 * np.exp(-v/80)
-nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
-
-# Sodium (Na) Channel (activating)
-alphaM = np.vectorize(lambda v: 0.1*(25-v) / (np.exp((25-v)/10) - 1) if v!= 25 else 1)
-betaM = lambda v: 4 * np.exp(-v/18)
-mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
-
-# Sodium (Na) Channel (inactivating)
-alphaH = lambda v: 0.07 * np.exp(-v/20)
-betaH  = lambda v: 1/(np.exp((30-v)/10) + 1)
-hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
+        self.m     = mInf(params["restingVoltage"])
+        self.h     = hInf(params["restingVoltage"])
+        self.n     = nInf(params["restingVoltage"])
 
 # Channel Activity
 # v = np.arange(-50, 151) # millivolts
@@ -73,16 +58,6 @@ hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 T    = 55    # ms
 dt   = 0.025 # ms
 timeLine = np.arange(0, T+dt, dt)
-
-# Hodgkin-Huxley Parametahs (from the papah!)
-restingVoltage     = 0      # V_rest (mv)
-Cm                 = 1      # uF/cm2
-gBarNa             = 120    # mS/cm2
-gBarK              = 36     # mS/cm2
-gBarL              = 0.3    # mS/cm2
-sodiumPotential    = 115    # mV
-potassiumPotential = -12    # mv
-leakagePotential   = 10.613 # mV
 
 # Current Stimulus
 def createCurrent(distance, stimulusCurrent, t1=5, t2=30):
@@ -120,10 +95,10 @@ for i in range(1, 10):
         axon.n += (axon.alphaN(axon.Vm[i-1]) * (1 - axon.n) - axon.betaN(axon.Vm[i-1])*axon.n) * dt
 
         # now integrate the changes in V
-        sodiumCurrent = sodiumConductance * (axon.Vm[i-1] - sodiumPotential)
-        potassiumCurrent = potassiumConductance * (axon.Vm[i-1] - potassiumPotential)
-        leakageCurrent = leakageConductance * (axon.Vm[i-1] - leakagePotential)
-        axon.Vm.append(axon.Vm[i-1] + (I[i-1] - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / Cm)
+        sodiumCurrent = sodiumConductance * (axon.Vm[i-1] - axon.params["sodiumPotential"])
+        potassiumCurrent = potassiumConductance * (axon.Vm[i-1] - axon.params["potassiumPotential"])
+        leakageCurrent = leakageConductance * (axon.Vm[i-1] - axon.params["leakagePotential"])
+        axon.Vm.append(axon.Vm[i-1] + (I[i-1] - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / axon.params["Cm"])
 
         # update status
         if i % 25 == 0:
