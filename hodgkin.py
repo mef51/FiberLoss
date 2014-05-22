@@ -81,13 +81,11 @@ dt   = 0.025 # ms
 timeLine = np.arange(0, T+dt, dt)
 
 # Current Stimulus
-def createCurrent(distance, stimulusCurrent, t1=5, t2=30):
-    effectiveCurrent = stimulusCurrent / (2*np.pi * distance**2) # uA/cm2. the current that reaches the axon.
-    I = np.zeros(len(timeLine)) # timecourse of current
-    for i, t in enumerate(timeLine):
-        if t1 <= t <= t2:
-            I[i] = effectiveCurrent
-    return I
+def getCurrent(t, distance, stimulusCurrent, tPulseStart=5, pulseWidth=25):
+    if tPulseStart <= t <= (tPulseStart + pulseWidth):
+        return stimulusCurrent / (2*np.pi * distance**2) # uA/cm2. the current that reaches the axon.
+    else:
+        return 0
 
 # Main loop
 animationFigure = pylab.figure(figsize=(16, 9))
@@ -104,21 +102,22 @@ for i in range(1, len(timeLine)):
     for k in range(1, 10):
         pylab.subplot(3, 3, k)
         axon = axons[k-1]
-        # create a pulsey current
-        I = createCurrent(axon.distance, stimulusCurrent)
+        # the current at time NOW
+        I = getCurrent(i*dt, axon.distance, stimulusCurrent)
 
         # for the plot's title
         effectiveCurrent = stimulusCurrent / (2*np.pi * axon.distance**2) # uA/cm2. the current that reaches the axon.
-        axon.step(I[i-1])
+        axon.step(I)
 
-        # update status
+        # update status every 25 frames (about a second of video).
         if i % 25 == 0:
-            # update status every 25 frames (about a second of video).
-            # don't wanna print a lot cuz it slows things down
-            print "Time: " + str(i*dt)
+            # get a profile of the current up til now
+            curr = []
+            for j in range(0, len(timeLine[:i+1])):
+                curr.append(getCurrent(j*dt, axon.distance, stimulusCurrent))
 
             # plot a frame of the graph
-            voltageLine, currentLine = pylab.plot(timeLine[:i+1], axon.Vm[:i+1], 'b-', timeLine[:i+1], I[:i+1], 'g-')
+            voltageLine, currentLine = pylab.plot(timeLine[:i+1], axon.Vm[:i+1], 'b-', timeLine[:i+1], curr[:i+1], 'g-')
             pylab.legend([voltageLine, currentLine], ["Response from cell", "Impulse current"])
             pylab.title('Effective Current ' + "{:6.3f}".format(effectiveCurrent) + u' µA/cm^2')
             pylab.ylabel('Membrane Potential (mV)')
@@ -126,6 +125,10 @@ for i in range(1, len(timeLine)):
             pylab.ylim([-20,120])
             pylab.xlim([0,60])
             images.append((voltageLine, currentLine))
+
+    if i % 25 == 0:
+        # don't wanna print a lot cuz it slows things down
+        print "Time: " + str(i*dt) + " ms"
 
 anim = ArtistAnimation(animationFigure, images, interval = 1, blit = True)
 print "Saving animation..."
