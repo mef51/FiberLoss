@@ -11,7 +11,10 @@ from matplotlib.animation import ArtistAnimation
 
 class AxonNode:
     """A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952"""
-    def __init__(self):
+    def __init__(self, distance):
+
+        self.distance = distance # distance from stimulus current
+
         # Potassium (K) Channel
         alphaN = self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10) - 1) if v != 10 else 0.1)
         betaN = self.betaN  = lambda v: 0.125 * np.exp(-v/80)
@@ -71,18 +74,18 @@ def createCurrent(distance, stimulusCurrent, t1=5, t2=30):
 # Main loop
 animationFigure = pylab.figure(figsize=(16, 9))
 images = []
-for i in range(1, 10):
-    pylab.subplot(3, 3, i)
+for k in range(1, 10):
+    pylab.subplot(3, 3, k)
 
     # create a pulsey current
-    distance = i*0.1 # cm. The distance between the axon and the current
+    distance = k*0.1 # cm. The distance between the axon and the current
     stimulusCurrent = 10. # uA. the current applied at the surface
     I = createCurrent(distance, stimulusCurrent)
 
     # for the plot's title
     effectiveCurrent = stimulusCurrent / (2*np.pi * distance**2) # uA/cm2. the current that reaches the axon.
 
-    axon = AxonNode() # Create an axon DUN DUN DUNNN
+    axon = AxonNode(distance) # Create an axon DUN DUN DUNNN
 
     for i in range(1, len(timeLine)):
         sodiumConductance    = axon.params["gBarNa"] * (axon.m**3) * axon.h
