@@ -95,7 +95,7 @@ def createCurrent(distance, stimulusCurrent, t1=5, t2=30):
     return I
 
 # Main loop
-animationFigure = pylab.figure()
+animationFigure = pylab.figure(figsize=(16, 9))
 images = []
 for i in range(1, 10):
     pylab.subplot(3, 3, i)
