@@ -28,7 +28,7 @@ class AxonNode:
         self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         # Hodgkin-Huxley Parametahs (from the papah!)
-        self.params = {
+        params = self.params = {
             "restingVoltage"     : 0,      # V_rest (mv)
             "Cm"                 : 1,      # uF/cm2
             "gBarNa"             : 120,    # mS/cm2
@@ -39,8 +39,7 @@ class AxonNode:
             "leakagePotential"   : 10.613 # mV
         }
 
-        self.Vm    = np.zeros(len(timeLine)) # The membrane potential we wanna find
-        self.Vm[0] = params[".restingVoltage"]
+        self.Vm    = [params["restingVoltage"]] # The axon node's membrane potential
         self.m     = mInf(restingVoltage)
         self.h     = hInf(restingVoltage)
         self.n     = nInf(restingVoltage)
@@ -108,26 +107,23 @@ for i in range(1, 10):
     # for the plot's title
     effectiveCurrent = stimulusCurrent / (2*np.pi * distance**2) # uA/cm2. the current that reaches the axon.
 
-    Vm    = [restingVoltage]     # The membrane potential we wanna find
-    m     = mInf(restingVoltage)
-    h     = hInf(restingVoltage)
-    n     = nInf(restingVoltage)
+    axon = AxonNode() # Create an axon DUN DUN DUNNN
 
     for i in range(1, len(timeLine)):
-        sodiumConductance    = gBarNa * (m**3) * h
-        potassiumConductance = gBarK  * (n**4)
-        leakageConductance   = gBarL
+        sodiumConductance    = axon.params["gBarNa"] * (axon.m**3) * axon.h
+        potassiumConductance = axon.params["gBarK"]  * (axon.n**4)
+        leakageConductance   = axon.params["gBarL"]
 
         # integrate the equations on m, h, and n
-        m += (alphaM(Vm[i-1]) * (1 - m) - betaM(Vm[i-1])*m) * dt
-        h += (alphaH(Vm[i-1]) * (1 - h) - betaH(Vm[i-1])*h) * dt
-        n += (alphaN(Vm[i-1]) * (1 - n) - betaN(Vm[i-1])*n) * dt
+        axon.m += (axon.alphaM(axon.Vm[i-1]) * (1 - axon.m) - axon.betaM(axon.Vm[i-1])*axon.m) * dt
+        axon.h += (axon.alphaH(axon.Vm[i-1]) * (1 - axon.h) - axon.betaH(axon.Vm[i-1])*axon.h) * dt
+        axon.n += (axon.alphaN(axon.Vm[i-1]) * (1 - axon.n) - axon.betaN(axon.Vm[i-1])*axon.n) * dt
 
         # now integrate the changes in V
-        sodiumCurrent = sodiumConductance * (Vm[i-1] - sodiumPotential)
-        potassiumCurrent = potassiumConductance * (Vm[i-1] - potassiumPotential)
-        leakageCurrent = leakageConductance * (Vm[i-1] - leakagePotential)
-        Vm.append(Vm[i-1] + (I[i-1] - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / Cm)
+        sodiumCurrent = sodiumConductance * (axon.Vm[i-1] - sodiumPotential)
+        potassiumCurrent = potassiumConductance * (axon.Vm[i-1] - potassiumPotential)
+        leakageCurrent = leakageConductance * (axon.Vm[i-1] - leakagePotential)
+        axon.Vm.append(axon.Vm[i-1] + (I[i-1] - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / Cm)
 
         # update status
         if i % 25 == 0:
@@ -136,7 +132,7 @@ for i in range(1, 10):
             # print "Time: " + str(i*dt) + ", Saving frame " + str(i)
 
             # plot a frame of the graph
-            voltageLine, currentLine = pylab.plot(timeLine[:i+1], Vm[:i+1], 'b-', timeLine[:i+1], I[:i+1], 'g-')
+            voltageLine, currentLine = pylab.plot(timeLine[:i+1], axon.Vm[:i+1], 'b-', timeLine[:i+1], I[:i+1], 'g-')
             pylab.legend([voltageLine, currentLine], ["Response from cell", "Impulse current"])
             pylab.title('Effective Current ' + "{:6.3f}".format(effectiveCurrent) + u' µA/cm^2')
             pylab.ylabel('Membrane Potential (mV)')
