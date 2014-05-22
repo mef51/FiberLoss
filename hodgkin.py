@@ -47,6 +47,24 @@ class AxonNode:
         self.h     = hInf(params["restingVoltage"])
         self.n     = nInf(params["restingVoltage"])
 
+    # integrate response to stimulus current `stimulus`
+    def step(self, stimulus):
+        I = stimulus # I[i-1]
+        sodiumConductance    = self.params["gBarNa"] * (self.m**3) * self.h
+        potassiumConductance = self.params["gBarK"]  * (self.n**4)
+        leakageConductance   = self.params["gBarL"]
+
+        # integrate the equations on m, h, and n
+        self.m += (self.alphaM(self.Vm[i-1]) * (1 - self.m) - self.betaM(self.Vm[i-1])*self.m) * dt
+        self.h += (self.alphaH(self.Vm[i-1]) * (1 - self.h) - self.betaH(self.Vm[i-1])*self.h) * dt
+        self.n += (self.alphaN(self.Vm[i-1]) * (1 - self.n) - self.betaN(self.Vm[i-1])*self.n) * dt
+
+        # now integrate the changes in V
+        sodiumCurrent = sodiumConductance * (self.Vm[i-1] - self.params["sodiumPotential"])
+        potassiumCurrent = potassiumConductance * (self.Vm[i-1] - self.params["potassiumPotential"])
+        leakageCurrent = leakageConductance * (self.Vm[i-1] - self.params["leakagePotential"])
+        self.Vm.append(self.Vm[i-1] + (I - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / self.params["Cm"])
+
 # Channel Activity
 # v = np.arange(-50, 151) # millivolts
 # pylab.figure()
@@ -91,21 +109,7 @@ for i in range(1, len(timeLine)):
 
         # for the plot's title
         effectiveCurrent = stimulusCurrent / (2*np.pi * axon.distance**2) # uA/cm2. the current that reaches the axon.
-
-        sodiumConductance    = axon.params["gBarNa"] * (axon.m**3) * axon.h
-        potassiumConductance = axon.params["gBarK"]  * (axon.n**4)
-        leakageConductance   = axon.params["gBarL"]
-
-        # integrate the equations on m, h, and n
-        axon.m += (axon.alphaM(axon.Vm[i-1]) * (1 - axon.m) - axon.betaM(axon.Vm[i-1])*axon.m) * dt
-        axon.h += (axon.alphaH(axon.Vm[i-1]) * (1 - axon.h) - axon.betaH(axon.Vm[i-1])*axon.h) * dt
-        axon.n += (axon.alphaN(axon.Vm[i-1]) * (1 - axon.n) - axon.betaN(axon.Vm[i-1])*axon.n) * dt
-
-        # now integrate the changes in V
-        sodiumCurrent = sodiumConductance * (axon.Vm[i-1] - axon.params["sodiumPotential"])
-        potassiumCurrent = potassiumConductance * (axon.Vm[i-1] - axon.params["potassiumPotential"])
-        leakageCurrent = leakageConductance * (axon.Vm[i-1] - axon.params["leakagePotential"])
-        axon.Vm.append(axon.Vm[i-1] + (I[i-1] - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / axon.params["Cm"])
+        axon.step(I[i-1])
 
         # update status
         if i % 25 == 0:
