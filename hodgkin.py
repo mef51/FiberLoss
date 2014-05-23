@@ -119,8 +119,9 @@ for i in range(1, len(timeLine)):
 
             # plot a frame of the graph
             voltageLine, currentLine = pylab.plot(timeLine[:i+1], axon.Vm[:i+1], 'b-', timeLine[:i+1], curr[:i+1], 'g-')
-            pylab.legend([voltageLine, currentLine], ["Response from cell", "Impulse current"])
-            pylab.title('Effective Current ' + "{:6.3f}".format(effectiveCurrent) + u' µA/cm^2')
+            if k == 1: # have only 1 legend
+                pylab.legend([voltageLine, currentLine], ["Response from cell", "Impulse current"])
+            pylab.title('Effective Current ' + "{:6.3f}".format(effectiveCurrent) + u' µA/cm$^2$')
             pylab.ylabel('Membrane Potential (mV)')
             pylab.xlabel('Time (ms)')
             pylab.ylim([-20,120])
@@ -132,7 +133,7 @@ for i in range(1, len(timeLine)):
         print "Time: " + str(i*dt) + " ms"
         images.append(tuple(lines))
 
-
+pylab.tight_layout()
 anim = ArtistAnimation(animationFigure, images, interval = 40, blit = True)
 print "Saving animation..."
 anim.save("currentComparisons.mp4", extra_args=['-vcodec', 'libx264'])
