@@ -99,6 +99,7 @@ for i in range(0, 9):
     axons.append(AxonNode(distance))
 
 for i in range(1, len(timeLine)):
+    lines = []
     for k in range(1, 10):
         pylab.subplot(3, 3, k)
         axon = axons[k-1]
@@ -124,16 +125,18 @@ for i in range(1, len(timeLine)):
             pylab.xlabel('Time (ms)')
             pylab.ylim([-20,120])
             pylab.xlim([0,60])
-            images.append((voltageLine, currentLine))
+            lines += [voltageLine, currentLine]
 
     if i % 25 == 0:
         # don't wanna print a lot cuz it slows things down
         print "Time: " + str(i*dt) + " ms"
+        images.append(tuple(lines))
 
-anim = ArtistAnimation(animationFigure, images, interval = 1, blit = True)
+
+anim = ArtistAnimation(animationFigure, images, interval = 40, blit = True)
 print "Saving animation..."
+anim.save("currentComparisons.mp4", extra_args=['-vcodec', 'libx264'])
 pylab.show()
-# anim.save("model.mp4", dpi=200, extra_args=['-vcodec', 'libx264'])
 
 # pylab.figure()
 # pylab.plot(timeLine, Vm, timeLine, I)
