@@ -32,20 +32,18 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : 0.00362007157577,      # V_rest (mv) # this should be zero but mInf is broken
-            "Cm"                 : 1,      # uF/cm2
-            "gBarNa"             : 120,    # mS/cm2
-            "gBarK"              : 36,     # mS/cm2
+            "restingVoltage"     : 0.0,      # V_rest (mv)
+            "Cm"                 : 1.0,      # uF/cm2
+            "gBarNa"             : 120.0,    # mS/cm2
+            "gBarK"              : 36.0,     # mS/cm2
             "gBarL"              : 0.3,    # mS/cm2
-            "sodiumPotential"    : 115,    # mV
-            "potassiumPotential" : -12,    # mv
+            "sodiumPotential"    : 115.0,    # mV
+            "potassiumPotential" : -12.0,    # mv
             "leakagePotential"   : 10.613 # mV
         }
 
         self.Vm    = [params["restingVoltage"]] # The axon node's membrane potential
-        # self.m     = mInf(params["restingVoltage"])
-        self.m     = 0.0529550196222 # manual input cuz there's a bug in mInf
-
+        self.m     = mInf(params["restingVoltage"])
         self.h     = hInf(params["restingVoltage"])
         self.n     = nInf(params["restingVoltage"])
 
