@@ -100,6 +100,38 @@ def getDistance(x1, y1, x2, y2):
     y = abs(y1 - y2)
     return np.sqrt(x**2 + y**2)
 
+def plotPositions():
+    x = []
+    y = []
+    for i in range(0, len(nerve["axons"])):
+        x.append(nerve["axons"][i].x)
+        y.append(nerve["axons"][i].y)
+
+    x.append(stimulusCurrent["x"])
+    y.append(stimulusCurrent["y"])
+    pylab.scatter(x, y)
+    pylab.ylabel('y (cm)')
+    pylab.xlabel('x (cm)')
+    pylab.axis('equal')
+    pylab.axhline(y = stimulusCurrent["y"], color='k', linestyle='--')
+    pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]-0.5, "inside")
+    pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]+0.2, "outside")
+    pylab.show()
+
+def plotEachAxon():
+    for i in range(0, len(nerve["axons"])):
+        curr = []
+        for j in range(0, len(simulation.timeLine)):
+            curr.append(getCurrent(j*dt, nerve["axons"][i].distance, stimulusCurrent["magnitude"]))
+
+        print "plotting axon #" + str(i) + "..."
+        pylab.figure()
+        pylab.plot(simulation.timeLine, nerve["axons"][i].Vm, simulation.timeLine, curr)
+        pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["axons"][i].distance) + " cm")
+        pylab.ylabel('Membrane Potential (mV)')
+        pylab.xlabel('Time (msec)')
+        pylab.savefig("axons/axon" + str(i) + ".jpg")
+        pylab.close()
 
 # Current Stimulus
 stimulusCurrent = {
@@ -128,26 +160,9 @@ for i in range(0, nerve["numAxons"]):
 
     nerve["axons"].append(AxonPositionNode(x, y))
 
-
 T    = 55    # ms
 dt   = 0.025 # ms
 simulation = AxonClusterSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
-
-
-# make plots
-for i in range(0, len(nerve["axons"])):
-    curr = []
-    for j in range(0, len(simulation.timeLine)):
-        curr.append(getCurrent(j*dt, nerve["axons"][i].distance, stimulusCurrent["magnitude"]))
-
-    print "plotting axon #" + str(i) + "..."
-    pylab.figure()
-    pylab.plot(simulation.timeLine, nerve["axons"][i].Vm, simulation.timeLine, curr)
-    pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["axons"][i].distance) + " cm")
-    pylab.ylabel('Membrane Potential (mV)')
-    pylab.xlabel('Time (msec)')
-    pylab.savefig("axons/axon" + str(i) + ".jpg")
-    pylab.close()
 
