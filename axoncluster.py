@@ -67,16 +67,31 @@ class AxonPositionNode:
         leakageCurrent = leakageConductance * (self.Vm[lastVm] - self.params["leakagePotential"])
         self.Vm.append(self.Vm[lastVm] + (I - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / self.params["Cm"])
 
-# Current Stimulus
-stimulusCurrent = {
-    "magnitude" : 10000, # uA. the current applied at the surface
-    "x"         : 0,    # cm
-    "y"         : 10   # cm
-}
+### Simulayshun
+class AxonClusterSimulation:
+    def __init__(self, T=55, dt=0.025):
+        self.T = T
+        self.dt = dt
+        self.timeLine = np.arange(0, T+dt, dt)
 
+    def simulate(self, nerve, stimulusCurrent):
+        for t in range(1, len(self.timeLine)):
+            for i in range(0, len(nerve["axons"])):
+                axonPos = (nerve["axons"][i].x, nerve["axons"][i].y)  # (x, y)
+                currentPos = (stimulusCurrent["x"], stimulusCurrent["y"]) # (x, y)
+
+                distance = getDistance(axonPos[0], axonPos[1], currentPos[0], currentPos[1])
+                effectiveCurrent = getCurrent(t*self.dt, distance, stimulusCurrent["magnitude"])
+                nerve["axons"][i].distance = distance
+
+                # step the current axon forward IN TIIIME ♪♪
+                nerve["axons"][i].step(effectiveCurrent, self.dt)
+
+# returns the current that reaches the axon. The current dissipates across the distance
+# between the axon and the source of the stimulus
 def getCurrent(t, distance, current, tPulseStart=5, pulseWidth=25):
     if tPulseStart <= t <= (tPulseStart + pulseWidth):
-        return current / (2*np.pi * distance**2) # uA/cm2. the current that reaches the axon.
+        return current / (2*np.pi * distance**2) # uA/cm2.
     else:
         return 0
 
@@ -84,6 +99,15 @@ def getDistance(x1, y1, x2, y2):
     x = abs(x1 - x2)
     y = abs(y1 - y2)
     return np.sqrt(x**2 + y**2)
+
+
+# Current Stimulus
+stimulusCurrent = {
+    "magnitude" : 10000, # uA. the current applied at the surface
+    "x"         : 0,    # cm
+    "y"         : 10   # cm
+}
+
 
 # the nerve is a bundle of nerve fibers, or, a cluster of axons
 nerve = {
@@ -104,57 +128,26 @@ for i in range(0, nerve["numAxons"]):
 
     nerve["axons"].append(AxonPositionNode(x, y))
 
-### Simulayshun
-# prototypin
-class AxonClusterSimulation:
-    def __init__(self, T, dt):
-        self.T = T
-        selft.dt = dt
-        self.timeLine = np.arange(0, T+dt, dt)
-
-    def simulate(self, nerve, stimulusCurrent):
-        T = self.T
-        dt = self.dt
-        timeLine = self.timeLine
-
-        for i in range(0, len(nerve["axons"])):
-            axonPos = (nerve["axons"][i].x, nerve["axons"][i].y)  # (x, y)
-            currentPos = (stimulusCurrent["x"], stimulusCurrent["y"]) # (x, y)
-
-            distance = getDistance(axonPos[0], axonPos[1], currentPos[0], currentPos[1])
-            effectiveCurrent = getCurrent(0, distance, stimulusCurrent["magnitude"])
-
-            # step the current axon forward IN TIIIME ♪♪
-            nerve["axons"][i].step(effectiveCurrent, dt)
 
 T    = 55    # ms
 dt   = 0.025 # ms
-timeLine = np.arange(0, T+dt, dt)
+simulation = AxonClusterSimulation(T, dt)
+print "Starting simulation..."
+simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
 
-for t in range(1, len(timeLine)):
-    for i in range(0, len(nerve["axons"])):
-        axonPos = (nerve["axons"][i].x, nerve["axons"][i].y)  # (x, y)
-        currentPos = (stimulusCurrent["x"], stimulusCurrent["y"]) # (x, y)
 
-        distance = getDistance(axonPos[0], axonPos[1], currentPos[0], currentPos[1])
-        effectiveCurrent = getCurrent(t*dt, distance, stimulusCurrent["magnitude"])
-        nerve["axons"][i].distance = distance
-        nerve["axons"][i].current = effectiveCurrent
-
-        # step the current axon forward IN TIIIME ♪♪
-        nerve["axons"][i].step(effectiveCurrent, dt)
-
+# make plots
 for i in range(0, len(nerve["axons"])):
     curr = []
-    for j in range(0, len(timeLine)):
+    for j in range(0, len(simulation.timeLine)):
         curr.append(getCurrent(j*dt, nerve["axons"][i].distance, stimulusCurrent["magnitude"]))
 
     print "plotting axon #" + str(i) + "..."
     pylab.figure()
-    pylab.plot(timeLine, nerve["axons"][i].Vm, timeLine, curr)
+    pylab.plot(simulation.timeLine, nerve["axons"][i].Vm, simulation.timeLine, curr)
     pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["axons"][i].distance) + " cm")
     pylab.ylabel('Membrane Potential (mV)')
-    pylab.xlabel('timeLine (msec)')
+    pylab.xlabel('Time (msec)')
     pylab.savefig("axons/axon" + str(i) + ".jpg")
     pylab.close()
 
