@@ -170,11 +170,11 @@ nerve = {
 
 # Create and place the axons
 for i in range(0, nerve["numAxons"]):
-    r = random.uniform(0, nerve["radius"])  # cm
-    theta = random.uniform(0, 2*np.pi)  # radians
-
-    x = r * np.cos(theta)
-    y = r * np.sin(theta)
+    x = random.uniform(-nerve["radius"], nerve["radius"])
+    y = random.uniform(-nerve["radius"], nerve["radius"])
+    while (x**2 + y**2) > nerve["radius"]**2:
+        x = random.uniform(-nerve["radius"], nerve["radius"])
+        y = random.uniform(-nerve["radius"], nerve["radius"])
 
     nerve["axons"].append(AxonPositionNode(x, y))
 
