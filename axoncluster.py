@@ -133,6 +133,24 @@ def plotEachAxon():
         pylab.savefig("axons/axon" + str(i) + ".jpg")
         pylab.close()
 
+def plotCompoundPotential():
+    compoundPotential = []
+    for i in range(0, int(T/dt) + 1):
+        compoundPotential += [0]
+
+    for i in range(0, len(nerve['axons'])):
+        axon = nerve['axons'][i]
+        for k, v in enumerate(axon.Vm):
+            compoundPotential[k] += v
+
+    pylab.figure()
+    pylab.plot(simulation.timeLine, compoundPotential)
+    pylab.xlabel('Time (ms)')
+    pylab.ylabel('Voltage (mV)')
+    pylab.title('Sum of all Action Potentials')
+    pylab.savefig("sumOfPotentials.jpg")
+    pylab.close();
+
 # Current Stimulus
 stimulusCurrent = {
     "magnitude" : 10000, # uA. the current applied at the surface
@@ -165,4 +183,3 @@ dt   = 0.025 # ms
 simulation = AxonClusterSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
-
