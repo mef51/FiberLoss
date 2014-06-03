@@ -10,10 +10,11 @@ class AxonPositionNode:
     A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952 .
     This class is meant for creating axons with a specific location
     """
-    def __init__(self, x, y):
+    def __init__(self, x, y, diameter):
         # position
         self.x = x
         self.y = y
+        self.diameter = diameter
 
         # Potassium (K) Channel
         alphaN = self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10) - 1) if v != 10 else 0.1)
@@ -100,22 +101,30 @@ def getDistance(x1, y1, x2, y2):
     y = abs(y1 - y2)
     return np.sqrt(x**2 + y**2)
 
-def plotPositions():
+def plotPositions(plotStimulusPos=True):
     x = []
     y = []
     for i in range(0, len(nerve["axons"])):
         x.append(nerve["axons"][i].x)
         y.append(nerve["axons"][i].y)
 
-    x.append(stimulusCurrent["x"])
-    y.append(stimulusCurrent["y"])
+    if plotStimulusPos:
+        x.append(stimulusCurrent["x"])
+        y.append(stimulusCurrent["y"])
+
     pylab.scatter(x, y)
     pylab.ylabel('y (cm)')
     pylab.xlabel('x (cm)')
     pylab.axis('equal')
-    pylab.axhline(y = stimulusCurrent["y"], color='k', linestyle='--')
-    pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]-0.5, "inside")
-    pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]+0.2, "outside")
+    for i in range(0, len(nerve["axons"])):
+        print x[i], y[i]
+        circle = pylab.Circle((x[i],y[i]), nerve["axons"][i].diameter/2.0)
+        pylab.gca().add_artist(circle)
+
+    if plotStimulusPos:
+        pylab.axhline(y = stimulusCurrent["y"], color='k', linestyle='--')
+        pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]-0.5, "inside")
+        pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]+0.2, "outside")
     pylab.show()
 
 def plotEachAxon():
@@ -158,7 +167,6 @@ stimulusCurrent = {
     "y"         : 10   # cm
 }
 
-
 # the nerve is a bundle of nerve fibers, or, a cluster of axons
 nerve = {
     "numAxons" : 25,
@@ -172,11 +180,14 @@ nerve = {
 for i in range(0, nerve["numAxons"]):
     x = random.uniform(-nerve["radius"], nerve["radius"])
     y = random.uniform(-nerve["radius"], nerve["radius"])
+    diameter = random.uniform(0.01, 0.05)
+
     while (x**2 + y**2) > nerve["radius"]**2:
         x = random.uniform(-nerve["radius"], nerve["radius"])
         y = random.uniform(-nerve["radius"], nerve["radius"])
+        # TODO: make sure axons don't overlap
 
-    nerve["axons"].append(AxonPositionNode(x, y))
+    nerve["axons"].append(AxonPositionNode(x, y, diameter))
 
 T    = 55    # ms
 dt   = 0.025 # ms
