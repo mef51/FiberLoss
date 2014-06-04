@@ -195,10 +195,7 @@ for i in range(0, nerve["numAxons"]):
         for k, axon in enumerate(nerve["axons"]):
             distBetweenAxons = getDistance(x, y, axon.x, axon.y)
             if distBetweenAxons < (axon.diameter/2.0 + diameter/2.0):
-                print "here"
                 if distBetweenAxons < axon.diameter/2.0 or distBetweenAxons < diameter/2.0:
-                    print "pushing out!"
-
                     # axon's center is inside another axon. push it out
                     # this is vector stuff
                     direction = [x - axon.x, y - axon.y]
@@ -214,7 +211,6 @@ for i in range(0, nerve["numAxons"]):
                     recheck = True
                     break
                 else:
-                    print "shrinking!"
                     # axon is too big
                     amountToShrink = (axon.diameter/2.0 + diameter/2.0) - distBetweenAxons
                     diameter -= amountToShrink * 2
