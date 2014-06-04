@@ -112,13 +112,12 @@ def plotPositions(plotStimulusPos=True):
         x.append(stimulusCurrent["x"])
         y.append(stimulusCurrent["y"])
 
-    pylab.scatter(x, y)
+    pylab.scatter(x, y, color='r', marker='o', s=0)
     pylab.ylabel('y (cm)')
     pylab.xlabel('x (cm)')
     pylab.axis('equal')
     for i in range(0, len(nerve["axons"])):
-        print x[i], y[i]
-        circle = pylab.Circle((x[i],y[i]), nerve["axons"][i].diameter/2.0)
+        circle = pylab.Circle((x[i],y[i]), nerve["axons"][i].diameter/2.0, alpha=0.5)
         pylab.gca().add_artist(circle)
 
     if plotStimulusPos:
@@ -169,23 +168,58 @@ stimulusCurrent = {
 
 # the nerve is a bundle of nerve fibers, or, a cluster of axons
 nerve = {
-    "numAxons" : 25,
-    "axons"    : [],
-    "radius"   : 0.2,   # cm
-    "x"        : 0,     # cm
-    "y"        : 0      # cm
+    "numAxons"    : 50,
+    "axons"       : [],
+    "radius"      : 0.2,   # cm
+    "x"           : 0,     # cm
+    "y"           : 0,     # cm
+    "minAxonDiam" : 0.01,  # cm
+    "maxAxonDiam" : 0.05   # cm
 }
 
 # Create and place the axons
 for i in range(0, nerve["numAxons"]):
     x = random.uniform(-nerve["radius"], nerve["radius"])
     y = random.uniform(-nerve["radius"], nerve["radius"])
-    diameter = random.uniform(0.01, 0.05)
+    diameter = random.uniform(nerve["minAxonDiam"], nerve["maxAxonDiam"])
 
+    # make sure axon is in the nerve
     while (x**2 + y**2) > nerve["radius"]**2:
         x = random.uniform(-nerve["radius"], nerve["radius"])
         y = random.uniform(-nerve["radius"], nerve["radius"])
-        # TODO: make sure axons don't overlap
+
+    # make sure axons don't overlap guhh
+    recheck = True
+    while recheck:
+        recheck = False
+        for k, axon in enumerate(nerve["axons"]):
+            distBetweenAxons = getDistance(x, y, axon.x, axon.y)
+            if distBetweenAxons < (axon.diameter/2.0 + diameter/2.0):
+                print "here"
+                if distBetweenAxons < axon.diameter/2.0 or distBetweenAxons < diameter/2.0:
+                    print "pushing out!"
+
+                    # axon's center is inside another axon. push it out
+                    # this is vector stuff
+                    direction = [x - axon.x, y - axon.y]
+                    dirMag = np.sqrt(direction[0]**2 + direction[1]**2)
+                    # normalize this vector so that we can use it as a direction
+                    direction[0] = direction[0] /dirMag
+                    direction[1] = direction[1] /dirMag
+
+                    # xdiff = x - axon.x
+                    # ydiff = y - axon.y
+                    x += direction[0] * (axon.diameter/2.0 - distBetweenAxons + diameter/2.0)
+                    y += direction[1] * (axon.diameter/2.0 - distBetweenAxons + diameter/2.0)
+                    recheck = True
+                    break
+                else:
+                    print "shrinking!"
+                    # axon is too big
+                    amountToShrink = (axon.diameter/2.0 + diameter/2.0) - distBetweenAxons
+                    diameter -= amountToShrink * 2
+
+    # TODO: discard axons that are too small/too big
 
     nerve["axons"].append(AxonPositionNode(x, y, diameter))
 
