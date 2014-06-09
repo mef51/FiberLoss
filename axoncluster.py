@@ -77,20 +77,23 @@ class AxonClusterSimulation:
 
     def simulate(self, nerve, stimulusCurrent):
         for t in range(1, len(self.timeLine)):
+            if self.timeLine[t] % 1 == 0.0:
+                print "Simulation Time: " + str(self.timeLine[t])
+
             for i in range(0, len(nerve["axons"])):
                 axonPos = (nerve["axons"][i].x, nerve["axons"][i].y)  # (x, y)
                 currentPos = (stimulusCurrent["x"], stimulusCurrent["y"]) # (x, y)
 
                 distance = getDistance(axonPos[0], axonPos[1], currentPos[0], currentPos[1])
-                effectiveCurrent = getCurrent(t*self.dt, distance, stimulusCurrent["magnitude"])
+                effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
                 nerve["axons"][i].distance = distance
 
                 # step the current axon forward IN TIIIME ♪♪
                 nerve["axons"][i].step(effectiveCurrent, self.dt)
 
-# returns the current that reaches the axon. The current dissipates across the distance
+# returns the current density that reaches the axon. The current dissipates across the distance
 # between the axon and the source of the stimulus
-def getCurrent(t, distance, current, tPulseStart=5, pulseWidth=25):
+def getCurrentDensity(t, distance, current, tPulseStart=5, pulseWidth=25):
     if tPulseStart <= t <= (tPulseStart + pulseWidth):
         return current / (2*np.pi * distance**2) # uA/cm2.
     else:
@@ -193,7 +196,7 @@ def plotEachAxon():
     for i in range(0, len(nerve["axons"])):
         curr = []
         for j in range(0, len(simulation.timeLine)):
-            curr.append(getCurrent(j*dt, nerve["axons"][i].distance, stimulusCurrent["magnitude"]))
+            curr.append(getCurrentDensity(j*dt, nerve["axons"][i].distance, stimulusCurrent["magnitude"]))
 
         print "plotting axon #" + str(i) + "..."
         pylab.figure()
@@ -235,7 +238,7 @@ stimulusCurrent = {
 
 # the nerve is a bundle of nerve fibers, or, a cluster of axons
 nerve = {
-    "numAxons"    : 250,
+    "numAxons"    : 50,
     "axons"       : [],
     "radius"      : 0.2,   # cm
     "x"           : 0,     # cm
@@ -252,10 +255,10 @@ for i in range(0, nerve["numAxons"]):
         break
 print "Placed " + str(len(nerve["axons"])) + " axons."
 
-plotPositions(False)
-
 T    = 55    # ms
 dt   = 0.025 # ms
 simulation = AxonClusterSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
+plotCompoundPotential()
+plotEachAxon()
