@@ -10,11 +10,12 @@ class AxonPositionNode:
     A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952 .
     This class is meant for creating axons with a specific location
     """
-    def __init__(self, x, y, diameter):
+    def __init__(self, z, diameter, index):
         # position
-        self.x = x
-        self.y = y
+        self.z = z # length down the fiber
         self.diameter = diameter
+        # each axon in a node is labelled with a number (n). the axon closest to the stimulus is numbered n = 0
+        self.index = index
 
         # Potassium (K) Channel
         alphaN = self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10) - 1) if v != 10 else 0.1)
@@ -80,16 +81,16 @@ class AxonClusterSimulation:
             if self.timeLine[t] % 1 == 0.0:
                 print "Simulation Time: " + str(self.timeLine[t])
 
-            for i in range(0, len(nerve["axons"])):
-                axonPos = (nerve["axons"][i].x, nerve["axons"][i].y)  # (x, y)
+            for i in range(0, len(nerve["fibers"])):
+                axonPos = (nerve["fibers"][i].x, nerve["fibers"][i].y)  # (x, y)
                 currentPos = (stimulusCurrent["x"], stimulusCurrent["y"]) # (x, y)
 
                 distance = getDistance(axonPos[0], axonPos[1], currentPos[0], currentPos[1])
                 effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
-                nerve["axons"][i].distance = distance
+                nerve["fibers"][i].distance = distance
 
                 # step the current axon forward IN TIIIME ♪♪
-                nerve["axons"][i].step(effectiveCurrent, self.dt)
+                nerve["fibers"][i].step(effectiveCurrent, self.dt)
 
 # returns the current density that reaches the axon. The current dissipates across the distance
 # between the axon and the source of the stimulus
@@ -104,13 +105,13 @@ def getDistance(x1, y1, x2, y2):
     y = abs(y1 - y2)
     return np.sqrt(x**2 + y**2)
 
-# Places an axon and makes sure it doesn't overlap with any other axons in the nerve bundle
+# Places a nerve fiber and makes sure it doesn't overlap with any other nerve fibers in the nerve bundle
 # returns true if it succeeds, false otherwise
-def placeAxonInNerve(nerve, maxAttempts = 1000):
-    def getAxon(maxAttempts = 1000):
+def placeFiberInNerve(nerve, maxAttempts = 1000):
+    def placeFiber(maxAttempts = 1000):
         x = random.uniform(-nerve["radius"], nerve["radius"]) + nerve["x"]
         y = random.uniform(-nerve["radius"], nerve["radius"]) + nerve["y"]
-        diameter = random.uniform(nerve["minAxonDiam"], nerve["maxAxonDiam"])
+        diameter = random.uniform(nerve["minFiberDiam"], nerve["maxFiberDiam"])
 
         # make sure axon is in the nerve
         while (x**2 + y**2) > nerve["radius"]**2:
@@ -122,45 +123,45 @@ def placeAxonInNerve(nerve, maxAttempts = 1000):
         numRechecks = 0
         while recheck:
             if numRechecks > maxAttempts:
-                print "Couldn't place " + str(nerve["numAxons"]) + " axons after " + str(maxAttempts) + " attempts!"
-                print "Giving up at " + str(len(nerve["axons"])) + " axons."
+                print "Couldn't place " + str(nerve["numFibers"]) + " fibers after " + str(maxAttempts) + " attempts!"
+                print "Giving up at " + str(len(nerve["fibers"])) + " fibers."
                 return None
 
             recheck = False
-            for k, axon in enumerate(nerve["axons"]):
-                distBetweenAxons = getDistance(x, y, axon.x, axon.y)
-                if distBetweenAxons < (axon.diameter/2.0 + diameter/2.0):
-                    if distBetweenAxons < axon.diameter/2.0 or distBetweenAxons < diameter/2.0:
-                        # axon's center is inside another axon. push it out
+            for k, fiber in enumerate(nerve["fibers"]):
+                distBetweenFibers = getDistance(x, y, fiber.x, fiber.y)
+                if distBetweenFibers < (fiber.diameter/2.0 + diameter/2.0):
+                    if distBetweenFibers < fiber.diameter/2.0 or distBetweenFibers < diameter/2.0:
+                        # fiber's center is inside another fiber. push it out
                         # this is vector stuff
-                        direction = [x - axon.x, y - axon.y]
+                        direction = [x - fiber.x, y - fiber.y]
                         dirMag = np.sqrt(direction[0]**2 + direction[1]**2)
                         # normalize this vector so that we can use it as a direction
                         direction[0] = direction[0] /dirMag
                         direction[1] = direction[1] /dirMag
 
-                        x += direction[0] * (axon.diameter/2.0 - distBetweenAxons + diameter/2.0)
-                        y += direction[1] * (axon.diameter/2.0 - distBetweenAxons + diameter/2.0)
+                        x += direction[0] * (fiber.diameter/2.0 - distBetweenFibers + diameter/2.0)
+                        y += direction[1] * (fiber.diameter/2.0 - distBetweenFibers + diameter/2.0)
                         recheck = True
                         numRechecks += 1
                         break
                     else:
-                        # axon is too big
-                        amountToShrink = (axon.diameter/2.0 + diameter/2.0) - distBetweenAxons
+                        # fiber is too big
+                        amountToShrink = (fiber.diameter/2.0 + diameter/2.0) - distBetweenFibers
                         diameter -= amountToShrink * 2
 
-        return AxonPositionNode(x, y, diameter)
+        return NerveFiber(x, y, diameter)
 
-    axon = getAxon(maxAttempts)
-    # make sure axon isn't too big or small
-    while axon.diameter < nerve["minAxonDiam"] or axon.diameter > nerve["maxAxonDiam"]:
-        result = getAxon(maxAttempts)
+    fiber = placeFiber(maxAttempts)
+    # make sure fiber isn't too big or small
+    while fiber.diameter < nerve["minFiberDiam"] or fiber.diameter > nerve["maxFiberDiam"]:
+        result = placeFiber(maxAttempts)
         if result is None:
             return False
         else:
-            axon = result
+            fiber = result
 
-    nerve["axons"].append(axon)
+    nerve["fibers"].append(fiber)
     return True
 
 ##########################
@@ -170,9 +171,9 @@ def placeAxonInNerve(nerve, maxAttempts = 1000):
 def plotPositions(plotStimulusPos=True):
     x = []
     y = []
-    for i in range(0, len(nerve["axons"])):
-        x.append(nerve["axons"][i].x)
-        y.append(nerve["axons"][i].y)
+    for i in range(0, len(nerve["fibers"])):
+        x.append(nerve["fibers"][i].x)
+        y.append(nerve["fibers"][i].y)
 
     if plotStimulusPos:
         x.append(stimulusCurrent["x"])
@@ -182,8 +183,8 @@ def plotPositions(plotStimulusPos=True):
     pylab.ylabel('y (cm)')
     pylab.xlabel('x (cm)')
     pylab.axis('equal')
-    for i in range(0, len(nerve["axons"])):
-        circle = pylab.Circle((x[i],y[i]), nerve["axons"][i].diameter/2.0, alpha=0.5)
+    for i in range(0, len(nerve["fibers"])):
+        circle = pylab.Circle((x[i],y[i]), nerve["fibers"][i].diameter/2.0, alpha=0.5)
         pylab.gca().add_artist(circle)
 
     if plotStimulusPos:
@@ -192,16 +193,17 @@ def plotPositions(plotStimulusPos=True):
         pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]+0.2, "outside")
     pylab.show()
 
-def plotEachAxon():
-    for i in range(0, len(nerve["axons"])):
+# plots the membrane potential of the axons closest to the stimulus
+def plotClosestAxons():
+    for i in range(0, len(nerve["fibers"])):
         curr = []
         for j in range(0, len(simulation.timeLine)):
-            curr.append(getCurrentDensity(j*dt, nerve["axons"][i].distance, stimulusCurrent["magnitude"]))
+            curr.append(getCurrentDensity(j*dt, nerve["fibers"][i].distance, stimulusCurrent["magnitude"]))
 
         print "plotting axon #" + str(i) + "..."
         pylab.figure()
-        pylab.plot(simulation.timeLine, nerve["axons"][i].Vm, simulation.timeLine, curr)
-        pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["axons"][i].distance) + " cm")
+        pylab.plot(simulation.timeLine, nerve["fibers"][i].Vm, simulation.timeLine, curr)
+        pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["fibers"][i].distance) + " cm")
         pylab.ylabel('Membrane Potential (mV)')
         pylab.xlabel('Time (msec)')
         pylab.savefig("axons/axon" + str(i) + ".jpg")
@@ -212,8 +214,8 @@ def plotCompoundPotential():
     for i in range(0, int(T/dt) + 1):
         compoundPotential += [0]
 
-    for i in range(0, len(nerve['axons'])):
-        axon = nerve['axons'][i]
+    for i in range(0, len(nerve['fibers'])):
+        axon = nerve['fibers'][i]
         for k, v in enumerate(axon.Vm):
             compoundPotential[k] += v
 
@@ -236,24 +238,43 @@ stimulusCurrent = {
     "y"         : 10   # cm
 }
 
-# the nerve is a bundle of nerve fibers, or, a cluster of axons
+# the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
-    "numAxons"    : 50,
-    "axons"       : [],
+    "numFibers"   : 50,
+    "numNodes"    : 10,    # the number of axon nodes each fiber has
+    "fibers"      : [],
     "radius"      : 0.2,   # cm
     "x"           : 0,     # cm
     "y"           : 0,     # cm
-    "minAxonDiam" : 0.01,  # cm
-    "maxAxonDiam" : 0.05   # cm
+    "minFiberDiam" : 0.01, # cm
+    "maxFiberDiam" : 0.05  # cm
 }
 
+class NerveFiber:
+    """
+    Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
+    by myelin).
+    """
+    def __init__(self, x, y, fiberDiameter, axonalLength=1.0, internodalLength=1.0, numNodes=10):
+        self.x = x
+        self.y = y
+        self.fiberDiameter = fiberDiameter
+
+        axonalDiameter = self.axonalDiameter = 0.7 * fiberDiameter
+        axonNodes = self.axonNodes = []
+        for i in range(0, numNodes):
+            axonNodes.append(AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, i))
+
+
+a = NerveFiber()
+exit()
 # Create and place the axons
-print "Creating bundle of axons..."
-for i in range(0, nerve["numAxons"]):
-    succeeded = placeAxonInNerve(nerve)
-    if not succeeded:
-        break
-print "Placed " + str(len(nerve["axons"])) + " axons."
+# print "Creating bundle of fibers..."
+# for i in range(0, nerve["numFibers"]):
+#     succeeded = placeFiberInNerve(nerve)
+#     if not succeeded:
+#         break
+# print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
 T    = 55    # ms
 dt   = 0.025 # ms
@@ -261,4 +282,4 @@ simulation = AxonClusterSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
 plotCompoundPotential()
-plotEachAxon()
+plotClosestAxons()
