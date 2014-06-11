@@ -83,12 +83,8 @@ class NerveBundleSimulation:
 
             for i, fiber in enumerate(nerve["fibers"]): # for each nerve fiber
                 for k, axonNode in enumerate(fiber.axonNodes): # for each node in the fiber
-                    nodePos = (fiber.x, fiber.y, axonNode.z)  # (x, y, z)
-                    currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
-
-                    distance = getDistance(nodePos[0], nodePos[1], nodePos[2], currPos[0], currPos[1], currPos[2])
+                    distance = axonNode.distanceFromStimulus
                     effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
-                    axonNode.distance = distance
 
                     # step the current axon forward IN TIIIME ♪♪
                     print "Stepping axon #" + str(k) + " in fiber #" + str(i)
@@ -201,12 +197,12 @@ def plotClosestAxons():
     for i in range(0, len(nerve["fibers"])):
         curr = []
         for j in range(0, len(simulation.timeLine)):
-            curr.append(getCurrentDensity(j*dt, nerve["fibers"][i].distance, stimulusCurrent["magnitude"]))
+            curr.append(getCurrentDensity(j*dt, nerve["fibers"][i].distanceFromStimulus, stimulusCurrent["magnitude"]))
 
         print "plotting axon #" + str(i) + "..."
         pylab.figure()
         pylab.plot(simulation.timeLine, nerve["fibers"][i].Vm, simulation.timeLine, curr)
-        pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["fibers"][i].distance) + " cm")
+        pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["fibers"][i].distanceFromStimulus) + " cm")
         pylab.ylabel('Membrane Potential (mV)')
         pylab.xlabel('Time (msec)')
         pylab.savefig("axons/axon" + str(i) + ".jpg")
@@ -268,7 +264,14 @@ class NerveFiber:
         axonalDiameter = self.axonalDiameter = 0.7 * diameter
         axonNodes = self.axonNodes = []
         for i in range(0, numNodes):
-            axonNodes.append(AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, i))
+            axonNode = AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, i)
+
+            nodePos = (self.x, self.y, axonNode.z)  # (x, y, z)
+            currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
+
+            distance = getDistance(nodePos[0], nodePos[1], nodePos[2], currPos[0], currPos[1], currPos[2])
+            axonNode.distanceFromStimulus = distance
+            axonNodes.append(axonNode)
 
 # Create and place the axons
 print "Creating bundle of fibers..."
