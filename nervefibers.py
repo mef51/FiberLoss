@@ -70,7 +70,7 @@ class AxonPositionNode:
         self.Vm.append(self.Vm[lastVm] + (I - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / self.params["Cm"])
 
 ### Simulayshun
-class AxonClusterSimulation:
+class NerveBundleSimulation:
     def __init__(self, T=55, dt=0.025):
         self.T = T
         self.dt = dt
@@ -81,16 +81,18 @@ class AxonClusterSimulation:
             if self.timeLine[t] % 1 == 0.0:
                 print "Simulation Time: " + str(self.timeLine[t])
 
-            for i in range(0, len(nerve["fibers"])):
-                axonPos = (nerve["fibers"][i].x, nerve["fibers"][i].y)  # (x, y)
-                currentPos = (stimulusCurrent["x"], stimulusCurrent["y"]) # (x, y)
+            for i in range(0, len(nerve["fibers"])): # for each nerve fiber
+                for k, axonNode in enumerate(nerve["fibers"][i].axonNodes): # for each node in the fiber
+                    axonNodePos = (nerve["fibers"][i].x, nerve["fibers"][i].y, axonNode.z)  # (x, y, z)
+                    currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
 
-                distance = getDistance(axonPos[0], axonPos[1], currentPos[0], currentPos[1])
-                effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
-                nerve["fibers"][i].distance = distance
+                    distance = getDistance(axonNodePos[0], axonNodePos[1], axonNodePos[2], currPos[0], currPos[1], currPos[2])
+                    effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
+                    axonNode.distance = distance
 
-                # step the current axon forward IN TIIIME ♪♪
-                nerve["fibers"][i].step(effectiveCurrent, self.dt)
+                    # step the current axon forward IN TIIIME ♪♪
+                    print "Stepping axon #" + str(k) + " in fiber #" + str(i)
+                    axonNode.step(effectiveCurrent, self.dt)
 
 # returns the current density that reaches the axon. The current dissipates across the distance
 # between the axon and the source of the stimulus
@@ -100,10 +102,11 @@ def getCurrentDensity(t, distance, current, tPulseStart=5, pulseWidth=25):
     else:
         return 0
 
-def getDistance(x1, y1, x2, y2):
+def getDistance(x1, y1, z1, x2, y2, z2):
     x = abs(x1 - x2)
     y = abs(y1 - y2)
-    return np.sqrt(x**2 + y**2)
+    z = abs(z1 - z2)
+    return np.sqrt(x**2 + y**2 + z**2)
 
 # Places a nerve fiber and makes sure it doesn't overlap with any other nerve fibers in the nerve bundle
 # returns true if it succeeds, false otherwise
@@ -129,7 +132,7 @@ def placeFiberInNerve(nerve, maxAttempts = 1000):
 
             recheck = False
             for k, fiber in enumerate(nerve["fibers"]):
-                distBetweenFibers = getDistance(x, y, fiber.x, fiber.y)
+                distBetweenFibers = getDistance(x, y, 0, fiber.x, fiber.y, 0)
                 if distBetweenFibers < (fiber.diameter/2.0 + diameter/2.0):
                     if distBetweenFibers < fiber.diameter/2.0 or distBetweenFibers < diameter/2.0:
                         # fiber's center is inside another fiber. push it out
@@ -234,8 +237,9 @@ def plotCompoundPotential():
 # Current Stimulus
 stimulusCurrent = {
     "magnitude" : 10000, # uA. the current applied at the surface
-    "x"         : 0,    # cm
-    "y"         : 10   # cm
+    "x"         : 0,     # cm
+    "y"         : 10,    # cm
+    "z"         : 0      # cm
 }
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
@@ -244,8 +248,9 @@ nerve = {
     "numNodes"    : 10,    # the number of axon nodes each fiber has
     "fibers"      : [],
     "radius"      : 0.2,   # cm
-    "x"           : 0,     # cm
-    "y"           : 0,     # cm
+    "x"           : 0.0,   # cm
+    "y"           : 0.0,   # cm
+    "z"           : 0,   # cm
     "minFiberDiam" : 0.01, # cm
     "maxFiberDiam" : 0.05  # cm
 }
@@ -255,31 +260,37 @@ class NerveFiber:
     Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
     by myelin).
     """
-    def __init__(self, x, y, fiberDiameter, axonalLength=1.0, internodalLength=1.0, numNodes=10):
+    def __init__(self, x, y, diameter, axonalLength=1.0, internodalLength=1.0, numNodes=10):
         self.x = x
         self.y = y
-        self.fiberDiameter = fiberDiameter
+        self.diameter = diameter
 
-        axonalDiameter = self.axonalDiameter = 0.7 * fiberDiameter
+        axonalDiameter = self.axonalDiameter = 0.7 * diameter
         axonNodes = self.axonNodes = []
         for i in range(0, numNodes):
             axonNodes.append(AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, i))
 
-
-a = NerveFiber()
-exit()
 # Create and place the axons
-# print "Creating bundle of fibers..."
-# for i in range(0, nerve["numFibers"]):
-#     succeeded = placeFiberInNerve(nerve)
-#     if not succeeded:
-#         break
-# print "Placed " + str(len(nerve["fibers"])) + " fibers."
+print "Creating bundle of fibers..."
+for i in range(0, nerve["numFibers"]):
+    succeeded = placeFiberInNerve(nerve)
+    if not succeeded:
+        break
+print "Placed " + str(len(nerve["fibers"])) + " fibers."
+
+# fiber = nerve["fibers"][0]
+# for i, axonNode in enumerate(fiber.axonNodes):
+#     print "=================" + str(i)
+#     print "Node's z position: " + str(axonNode.z)
+#     print "Node's diameter: " + str(axonNode.diameter)
+#     print "Node's index: " + str(axonNode.index)
+
 
 T    = 55    # ms
 dt   = 0.025 # ms
-simulation = AxonClusterSimulation(T, dt)
+simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
+exit()
 plotCompoundPotential()
 plotClosestAxons()
