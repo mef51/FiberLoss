@@ -81,12 +81,12 @@ class NerveBundleSimulation:
             if self.timeLine[t] % 1 == 0.0:
                 print "Simulation Time: " + str(self.timeLine[t])
 
-            for i in range(0, len(nerve["fibers"])): # for each nerve fiber
-                for k, axonNode in enumerate(nerve["fibers"][i].axonNodes): # for each node in the fiber
-                    axonNodePos = (nerve["fibers"][i].x, nerve["fibers"][i].y, axonNode.z)  # (x, y, z)
+            for i, fiber in enumerate(nerve["fibers"]): # for each nerve fiber
+                for k, axonNode in enumerate(fiber.axonNodes): # for each node in the fiber
+                    nodePos = (fiber.x, fiber.y, axonNode.z)  # (x, y, z)
                     currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
 
-                    distance = getDistance(axonNodePos[0], axonNodePos[1], axonNodePos[2], currPos[0], currPos[1], currPos[2])
+                    distance = getDistance(nodePos[0], nodePos[1], nodePos[2], currPos[0], currPos[1], currPos[2])
                     effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
                     axonNode.distance = distance
 
