@@ -35,13 +35,14 @@ class AxonPositionNode:
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
             "restingVoltage"     : 0.0,      # V_rest (mv)
-            "Cm"                 : 1.0,      # uF/cm2
-            "gBarNa"             : 120.0,    # mS/cm2
-            "gBarK"              : 36.0,     # mS/cm2
-            "gBarL"              : 0.3,    # mS/cm2
+            "Cm"                 : 1.0,      # µF/cm²
+            "gBarNa"             : 120.0,    # mS/cm²
+            "gBarK"              : 36.0,     # mS/cm²
+            "gBarL"              : 0.3,      # mS/cm²
             "sodiumPotential"    : 115.0,    # mV
             "potassiumPotential" : -12.0,    # mv
-            "leakagePotential"   : 10.613 # mV
+            "leakagePotential"   : 10.613,   # mV
+            "externalResistivity": 300       # Ω•cm
         }
 
         self.Vm    = [params["restingVoltage"]] # The axon node's membrane potential
@@ -232,7 +233,7 @@ def plotCompoundPotential():
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 10000, # uA. the current applied at the surface
+    "magnitude" : 10000, # µA. the current applied at the surface
     "x"         : 0,     # cm
     "y"         : 10,    # cm
     "z"         : 0      # cm
@@ -246,7 +247,7 @@ nerve = {
     "radius"      : 0.2,   # cm
     "x"           : 0.0,   # cm
     "y"           : 0.0,   # cm
-    "z"           : 0,   # cm
+    "z"           : 0.0,   # cm
     "minFiberDiam" : 0.01, # cm
     "maxFiberDiam" : 0.05  # cm
 }
