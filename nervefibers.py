@@ -10,10 +10,12 @@ class AxonPositionNode:
     A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952 .
     This class is meant for creating axons with a specific location
     """
-    def __init__(self, z, diameter, index):
+    def __init__(self, z, diameter, length, index):
         # position
-        self.z = z # length down the fiber
-        self.diameter = diameter
+        self.z = z               # position down the fiber
+        self.diameter = diameter # the diameter of the node
+        self.length = length     # the length of the node
+
         # each axon in a node is labelled with a number (n). the axon closest to the stimulus is numbered n = 0
         self.index = index
 
@@ -35,15 +37,17 @@ class AxonPositionNode:
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
             "restingVoltage"     : 0.0,      # V_rest (mv)
-            "Cm"                 : 1.0,      # µF/cm²
-            "gBarNa"             : 120.0,    # mS/cm²
-            "gBarK"              : 36.0,     # mS/cm²
-            "gBarL"              : 0.3,      # mS/cm²
+            "cm"                 : 1.0,      # µF/cm² membrane capacitance per unit area
+            "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
+            "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
+            "gBarL"              : 0.3,      # mS/cm² leakage current conductance per unit area
             "sodiumPotential"    : 115.0,    # mV
             "potassiumPotential" : -12.0,    # mv
             "leakagePotential"   : 10.613,   # mV
-            "externalResistivity": 300       # Ω•cm
+            "externalResistivity": 300.0     # Ω•cm
         }
+
+        params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (µF)
 
         self.Vm    = [params["restingVoltage"]] # The axon node's membrane potential
         self.m     = mInf(params["restingVoltage"])
@@ -65,10 +69,21 @@ class AxonPositionNode:
         self.n += (self.alphaN(self.Vm[lastVm]) * (1 - self.n) - self.betaN(self.Vm[lastVm])*self.n) * dt
 
         # now integrate the changes in V
-        sodiumCurrent = sodiumConductance * (self.Vm[lastVm] - self.params["sodiumPotential"])
+        sodiumCurrent    = sodiumConductance    * (self.Vm[lastVm] - self.params["sodiumPotential"])
         potassiumCurrent = potassiumConductance * (self.Vm[lastVm] - self.params["potassiumPotential"])
-        leakageCurrent = leakageConductance * (self.Vm[lastVm] - self.params["leakagePotential"])
-        self.Vm.append(self.Vm[lastVm] + (I - sodiumCurrent - potassiumCurrent - leakageCurrent) * dt / self.params["Cm"])
+        leakageCurrent   = leakageConductance   * (self.Vm[lastVm] - self.params["leakagePotential"])
+
+        # MCNEALLLLLL (1976)
+        def extV(stimulus, distance): # the external potential
+            return (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
+
+        neighbourPotential = leftNode.Vm[i - 1] + rightNode.Vm[i - 1] - (2 * self.Vm[lastVm]) # V_n-1 + V_n+1 - 2Vn
+        neighbourExtPotential = extV(I, leftNode.distance) + extV(I, rightNode.distance) - (2 * extV(I, self.distance))
+        ionicCurrent = -np.pi * self.diameter * self.length * (sodiumCurrent + potassiumPotential + leakageCurrent)
+
+        newV = self.Vm[lastVm]
+        newV += (dt / self.params["Cm"]) * (self.params["Ga"] * (neighbourPotential + neighbourExtPotential + ionicCurrent))
+        self.Vm.append(newV)
 
 ### Simulayshun
 class NerveBundleSimulation:
@@ -84,7 +99,7 @@ class NerveBundleSimulation:
 
             for i, fiber in enumerate(nerve["fibers"]): # for each nerve fiber
                 for k, axonNode in enumerate(fiber.axonNodes): # for each node in the fiber
-                    distance = axonNode.distanceFromStimulus
+                    distance = axonNode.distance
                     effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
 
                     # step the current axon forward IN TIIIME ♪♪
@@ -95,7 +110,8 @@ class NerveBundleSimulation:
 # between the axon and the source of the stimulus
 def getCurrentDensity(t, distance, current, tPulseStart=5, pulseWidth=25):
     if tPulseStart <= t <= (tPulseStart + pulseWidth):
-        return current / (2*np.pi * distance**2) # uA/cm2.
+        # return current / (2*np.pi * distance**2) # uA/cm2.
+        return current
     else:
         return 0
 
@@ -198,12 +214,12 @@ def plotClosestAxons():
     for i in range(0, len(nerve["fibers"])):
         curr = []
         for j in range(0, len(simulation.timeLine)):
-            curr.append(getCurrentDensity(j*dt, nerve["fibers"][i].distanceFromStimulus, stimulusCurrent["magnitude"]))
+            curr.append(getCurrentDensity(j*dt, nerve["fibers"][i].distance, stimulusCurrent["magnitude"]))
 
         print "plotting axon #" + str(i) + "..."
         pylab.figure()
         pylab.plot(simulation.timeLine, nerve["fibers"][i].Vm, simulation.timeLine, curr)
-        pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["fibers"][i].distanceFromStimulus) + " cm")
+        pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["fibers"][i].distance) + " cm")
         pylab.ylabel('Membrane Potential (mV)')
         pylab.xlabel('Time (msec)')
         pylab.savefig("axons/axon" + str(i) + ".jpg")
@@ -265,13 +281,14 @@ class NerveFiber:
         axonalDiameter = self.axonalDiameter = 0.7 * diameter
         axonNodes = self.axonNodes = []
         for i in range(0, numNodes):
-            axonNode = AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, i)
+            axonNode = AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, axonalLength, i)
 
             nodePos = (self.x, self.y, axonNode.z)  # (x, y, z)
             currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
 
+            # distance from stimulus
             distance = getDistance(nodePos[0], nodePos[1], nodePos[2], currPos[0], currPos[1], currPos[2])
-            axonNode.distanceFromStimulus = distance
+            axonNode.distance = distance
             axonNodes.append(axonNode)
 
 # Create and place the axons
