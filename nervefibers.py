@@ -40,10 +40,10 @@ class AxonPositionNode:
             "cm"                 : 1.0,      # µF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
-            "gBarL"              : 0.3,      # mS/cm² leakage current conductance per unit area
-            "sodiumPotential"    : 115.0,    # mV
-            "potassiumPotential" : -12.0,    # mv
-            "leakagePotential"   : 10.613,   # mV
+            "gBarL"              : 0.25,     # mS/cm² leakage current conductance per unit area
+            "sodiumPotential"    : 115.5,    # mV
+            "potassiumPotential" : -11.5,    # mv
+            "leakagePotential"   : 11.1,     # mV
             "externalResistivity": 300.0,    # Ω•cm
             "internalResistivity": 110.0     # Ω•cm also called axoplasm resistivity
         }
@@ -288,12 +288,13 @@ nerve = {
 class NerveFiber:
     """
     Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
-    by myelin).
+    by myelin). Axonal Length is in centimetres.
     """
-    def __init__(self, x, y, diameter, axonalLength=1.0, internodalLength=1.0, numNodes=10):
+    def __init__(self, x, y, diameter, axonalLength=0.00025, numNodes=10):
         self.x = x
         self.y = y
         self.diameter = diameter
+        self.internodalLength = internodalLength = diameter * 100 # McNeal (1976)
 
         axonalDiameter = self.axonalDiameter = 0.7 * diameter
         axonNodes = self.axonNodes = []
