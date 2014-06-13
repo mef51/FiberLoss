@@ -57,7 +57,7 @@ class AxonPositionNode:
         self.n     = nInf(params["restingVoltage"])
 
     # integrate response to stimulus current `stimulus`
-    def step(self, stimulus, dt):
+    def step(self, stimulus, leftNode, rightNode, dt):
         I = stimulus # I[i-1]
         lastVm = len(self.Vm) - 1
 
@@ -77,11 +77,14 @@ class AxonPositionNode:
 
         # MCNEALLLLLL (1976)
         def extV(stimulus, distance): # the external potential
-            return (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
+            if distance == 0:
+                return 0.0
+            else:
+                return (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
 
-        neighbourPotential = leftNode.Vm[i - 1] + rightNode.Vm[i - 1] - (2 * self.Vm[lastVm]) # V_n-1 + V_n+1 - 2Vn
-        neighbourExtPotential = extV(I, leftNode.distance) + extV(I, rightNode.distance) - (2 * extV(I, self.distance))
-        ionicCurrent = -np.pi * self.diameter * self.length * (sodiumCurrent + potassiumPotential + leakageCurrent)
+        neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * self.Vm[lastVm]) # V_n-1 + V_n+1 - 2Vn
+        neighbourExtPotential = extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
+        ionicCurrent = -np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
 
         newV = self.Vm[lastVm]
         newV += (dt / self.params["Cm"]) * (self.params["Ga"] * (neighbourPotential + neighbourExtPotential + ionicCurrent))
@@ -104,9 +107,21 @@ class NerveBundleSimulation:
                     distance = axonNode.distance
                     effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
 
+                    lastStep = len(axonNode.Vm) - 1
+                    leftNode = {"V": 0, "d": 0}
+                    rightNode = {"V": 0, "d": 0}
+
+                    if (k-1) > -1:
+                        leftNode["V"] = fiber.axonNodes[k-1].Vm[lastStep]
+                        leftNode["d"] = fiber.axonNodes[k-1].distance
+
+                    if (k+1) < len(fiber.axonNodes):
+                        rightNode["V"] = fiber.axonNodes[k+1].Vm[lastStep]
+                        rightNode["d"] = fiber.axonNodes[k+1].distance
+
                     # step the current axon forward IN TIIIME ♪♪
                     print "Stepping axon #" + str(k) + " in fiber #" + str(i)
-                    axonNode.step(effectiveCurrent, self.dt)
+                    axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
 
 # returns the current density that reaches the axon. The current dissipates across the distance
 # between the axon and the source of the stimulus
