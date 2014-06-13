@@ -87,7 +87,7 @@ class AxonPositionNode:
         ionicCurrent = -np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
 
         newV = self.Vm[lastVm]
-        newV += (dt / self.params["Cm"]) * (self.params["Ga"] * (neighbourPotential + neighbourExtPotential + ionicCurrent))
+        newV += (dt / self.params["Cm"]) * (self.params["Ga"] * (neighbourPotential + neighbourExtPotential) + ionicCurrent)
         self.Vm.append(newV)
 
 ### Simulayshun
@@ -265,7 +265,7 @@ def plotCompoundPotential():
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 10000, # µA. the current applied at the surface
+    "magnitude" : 10, # µA. the current applied at the surface
     "x"         : 0,     # cm
     "y"         : 10,    # cm
     "z"         : 0      # cm
@@ -273,8 +273,8 @@ stimulusCurrent = {
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
-    "numFibers"   : 50,
-    "numNodes"    : 10,    # the number of axon nodes each fiber has
+    "numFibers"   : 2,
+    "numNodes"    : 3,    # the number of axon nodes each fiber has
     "fibers"      : [],
     "radius"      : 0.2,   # cm
     "x"           : 0.0,   # cm
