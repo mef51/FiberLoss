@@ -120,7 +120,7 @@ class NerveBundleSimulation:
                         rightNode["d"] = fiber.axonNodes[k+1].distance
 
                     # step the current axon forward IN TIIIME ♪♪
-                    print "Stepping axon #" + str(k) + " in fiber #" + str(i)
+                    # print "Stepping axon #" + str(k) + " in fiber #" + str(i)
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
 
 # returns the current density that reaches the axon. The current dissipates across the distance
@@ -230,13 +230,14 @@ def plotPositions(plotStimulusPos=True):
 def plotClosestAxons():
     for i in range(0, len(nerve["fibers"])):
         curr = []
+        node = nerve["fibers"][i].axonNodes[0]
         for j in range(0, len(simulation.timeLine)):
-            curr.append(getCurrentDensity(j*dt, nerve["fibers"][i].distance, stimulusCurrent["magnitude"]))
+            curr.append(getCurrentDensity(j*dt, node.distance, stimulusCurrent["magnitude"]))
 
         print "plotting axon #" + str(i) + "..."
         pylab.figure()
-        pylab.plot(simulation.timeLine, nerve["fibers"][i].Vm, simulation.timeLine, curr)
-        pylab.title('Axon #' + str(i) + ": Distance = " + str(nerve["fibers"][i].distance) + " cm")
+        pylab.plot(simulation.timeLine, node.Vm, simulation.timeLine, curr)
+        pylab.title('Axon #' + str(i) + ": Distance = " + str(node.distance) + " cm")
         pylab.ylabel('Membrane Potential (mV)')
         pylab.xlabel('Time (msec)')
         pylab.savefig("axons/axon" + str(i) + ".jpg")
@@ -330,6 +331,5 @@ dt   = 0.025 # ms
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
-exit()
-plotCompoundPotential()
 plotClosestAxons()
+print "Done."
