@@ -105,7 +105,7 @@ class NerveBundleSimulation:
             for i, fiber in enumerate(nerve["fibers"]): # for each nerve fiber
                 for k, axonNode in enumerate(fiber.axonNodes): # for each node in the fiber
                     distance = axonNode.distance
-                    effectiveCurrent = getCurrentDensity(t*self.dt, distance, stimulusCurrent["magnitude"])
+                    effectiveCurrent = getCurrent(t*self.dt, stimulusCurrent["magnitude"])
 
                     lastStep = len(axonNode.Vm) - 1
                     leftNode = {"V": 0, "d": 0}
@@ -123,14 +123,12 @@ class NerveBundleSimulation:
                     # print "Stepping axon #" + str(k) + " in fiber #" + str(i)
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
 
-# returns the current density that reaches the axon. The current dissipates across the distance
-# between the axon and the source of the stimulus
-def getCurrentDensity(t, distance, current, tPulseStart=5, pulseWidth=25):
+# represents a square wave current strimulus
+def getCurrent(t, current, tPulseStart=5, pulseWidth=25):
     if tPulseStart <= t <= (tPulseStart + pulseWidth):
-        # return current / (2*np.pi * distance**2) # uA/cm2.
         return current
     else:
-        return 0
+        return 0.0
 
 def getDistance(x1, y1, z1, x2, y2, z2):
     x = abs(x1 - x2)
@@ -232,7 +230,7 @@ def plotClosestAxons():
         curr = []
         node = nerve["fibers"][i].axonNodes[0]
         for j in range(0, len(simulation.timeLine)):
-            curr.append(getCurrentDensity(j*dt, node.distance, stimulusCurrent["magnitude"]))
+            curr.append(getCurrent(j*dt, stimulusCurrent["magnitude"]))
 
         print "plotting axon #" + str(i) + "..."
         pylab.figure()
