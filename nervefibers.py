@@ -10,7 +10,7 @@ class AxonPositionNode:
     A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952 .
     This class is meant for creating axons with a specific location
     """
-    def __init__(self, z, diameter, length, index):
+    def __init__(self, z, diameter, length, index, internodalLength):
         # position
         self.z = z               # position down the fiber
         self.diameter = diameter # the diameter of the node
@@ -44,10 +44,12 @@ class AxonPositionNode:
             "sodiumPotential"    : 115.0,    # mV
             "potassiumPotential" : -12.0,    # mv
             "leakagePotential"   : 10.613,   # mV
-            "externalResistivity": 300.0     # Ω•cm
+            "externalResistivity": 300.0,    # Ω•cm
+            "internalResistivity": 110.0     # Ω•cm also called axoplasm resistivity
         }
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (µF)
+        params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (S)
 
         self.Vm    = [params["restingVoltage"]] # The axon node's membrane potential
         self.m     = mInf(params["restingVoltage"])
@@ -281,7 +283,7 @@ class NerveFiber:
         axonalDiameter = self.axonalDiameter = 0.7 * diameter
         axonNodes = self.axonNodes = []
         for i in range(0, numNodes):
-            axonNode = AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, axonalLength, i)
+            axonNode = AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, axonalLength, i, internodalLength)
 
             nodePos = (self.x, self.y, axonNode.z)  # (x, y, z)
             currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
