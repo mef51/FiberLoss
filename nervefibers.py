@@ -181,7 +181,7 @@ def placeFiberInNerve(nerve, maxAttempts = 1000):
                         amountToShrink = (fiber.diameter/2.0 + diameter/2.0) - distBetweenFibers
                         diameter -= amountToShrink * 2
 
-        return NerveFiber(x, y, diameter)
+        return NerveFiber(x, y, diameter, nerve["numNodes"])
 
     fiber = placeFiber(maxAttempts)
     # make sure fiber isn't too big or small
@@ -289,7 +289,7 @@ class NerveFiber:
     Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
     by myelin). Axonal Length is in centimetres.
     """
-    def __init__(self, x, y, diameter, axonalLength=0.00025, numNodes=10):
+    def __init__(self, x, y, diameter, numNodes, axonalLength=0.00025):
         self.x = x
         self.y = y
         self.diameter = diameter
