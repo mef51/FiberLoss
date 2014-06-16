@@ -20,18 +20,18 @@ class AxonPositionNode:
         self.index = index
 
         # Potassium (K) Channel
-        alphaN = self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10) - 1) if v != 10 else 0.1)
-        betaN = self.betaN  = lambda v: 0.125 * np.exp(-v/80)
+        alphaN = self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10.0) - 1) if v != 10 else 0.1)
+        betaN = self.betaN  = lambda v: 0.125 * np.exp(-v/80.0)
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         # Sodium (Na) Channel (activating)
-        alphaM = self.alphaM = np.vectorize(lambda v: 0.1*(25-v) / (np.exp((25-v)/10) - 1) if v!= 25 else 1)
-        betaM = self.betaM = lambda v: 4 * np.exp(-v/18)
+        alphaM = self.alphaM = np.vectorize(lambda v: 0.1*(25-v) / (np.exp((25-v)/10.0) - 1) if v!= 25 else 1.0)
+        betaM = self.betaM = lambda v: 4 * np.exp(-v/18.0)
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 
         # Sodium (Na) Channel (inactivating)
-        alphaH = self.alphaH = lambda v: 0.07 * np.exp(-v/20)
-        betaH = self.betaH  = lambda v: 1/(np.exp((30-v)/10) + 1)
+        alphaH = self.alphaH = lambda v: 0.07 * np.exp(-v/20.0)
+        betaH = self.betaH  = lambda v: 1/(np.exp((30-v)/10.0) + 1)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         # Hodgkin-Huxley Parametahs (from the papah!)
