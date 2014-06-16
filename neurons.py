@@ -28,7 +28,7 @@ class AxonNode:
             "Cm"                 : 1.0,      # uF/cm2
             "gBarNa"             : 120.0,    # mS/cm2
             "gBarK"              : 36.0,     # mS/cm2
-            "gBarL"              : 0.3.0,    # mS/cm2
+            "gBarL"              : 0.30,    # mS/cm2
             "sodiumPotential"    : 115.0,    # mV
             "potassiumPotential" : -12.0,    # mv
             "leakagePotential"   : 10.613 # mV
