@@ -36,7 +36,7 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : 0.0,      # V_rest (mv)
+            "restingVoltage"     : -0.181524014425,      # V_rest (mv)
             "cm"                 : 1.0,      # µF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
@@ -66,6 +66,10 @@ class AxonPositionNode:
         leakageConductance   = self.params["gBarL"]
 
         # integrate the equations on m, h, and n
+        varPrint(self.m, "self.m")
+        varPrint(self.h, "self.h")
+        varPrint(self.n, "self.n")
+
         self.m += (self.alphaM(self.Vm[lastVm]) * (1 - self.m) - self.betaM(self.Vm[lastVm])*self.m) * dt
         self.h += (self.alphaH(self.Vm[lastVm]) * (1 - self.h) - self.betaH(self.Vm[lastVm])*self.h) * dt
         self.n += (self.alphaN(self.Vm[lastVm]) * (1 - self.n) - self.betaN(self.Vm[lastVm])*self.n) * dt
@@ -84,11 +88,25 @@ class AxonPositionNode:
 
         neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * self.Vm[lastVm]) # V_n-1 + V_n+1 - 2Vn
         neighbourExtPotential = extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
-        ionicCurrent = -np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
+
+        surroundingCurrent = (self.params["Ga"] * (neighbourPotential + neighbourExtPotential))
+        ionicCurrent = np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
+
+        varPrint(sodiumCurrent, "sodiumCurrent")
+        varPrint(potassiumCurrent, "potassiumCurrent")
+        varPrint(leakageCurrent, "leakageCurrent")
 
         newV = self.Vm[lastVm]
-        newV += (dt / self.params["Cm"]) * (self.params["Ga"] * (neighbourPotential + neighbourExtPotential) + ionicCurrent)
+        newV += (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent)
+
+        varPrint(surroundingCurrent, "surroundingCurrent")
+        varPrint(ionicCurrent, "ionicCurrent")
+        varPrint(newV, "newV")
+
         self.Vm.append(newV)
+
+def varPrint(v, name):
+    print name + ": " + str(v)
 
 ### Simulayshun
 class NerveBundleSimulation:
@@ -99,8 +117,8 @@ class NerveBundleSimulation:
 
     def simulate(self, nerve, stimulusCurrent):
         for t in range(1, len(self.timeLine)):
-            if self.timeLine[t] % 1 == 0.0:
-                print "Simulation Time: " + str(self.timeLine[t])
+            # if self.timeLine[t] % 1 == 0.0:
+            #     print "Simulation Time: " + str(self.timeLine[t])
 
             for i, fiber in enumerate(nerve["fibers"]): # for each nerve fiber
                 for k, axonNode in enumerate(fiber.axonNodes): # for each node in the fiber
@@ -121,7 +139,10 @@ class NerveBundleSimulation:
 
                     # step the current axon forward IN TIIIME ♪♪
                     # print "Stepping axon #" + str(k) + " in fiber #" + str(i)
+                    print "========"
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
+                    if t == 2:
+                        exit()
 
 # represents a square wave current strimulus
 def getCurrent(t, current, tPulseStart=5, pulseWidth=25):
@@ -265,7 +286,7 @@ def plotCompoundPotential():
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 10, # µA. the current applied at the surface
+    "magnitude" : 0, # µA. the current applied at the surface
     "x"         : 0,     # cm
     "y"         : 10,    # cm
     "z"         : 0      # cm
@@ -273,8 +294,8 @@ stimulusCurrent = {
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
-    "numFibers"   : 2,
-    "numNodes"    : 3,    # the number of axon nodes each fiber has
+    "numFibers"   : 1,
+    "numNodes"    : 1,    # the number of axon nodes each fiber has
     "fibers"      : [],
     "radius"      : 0.2,   # cm
     "x"           : 0.0,   # cm
@@ -330,4 +351,7 @@ simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
 plotClosestAxons()
+
+print "Max Voltage for axon 0: " + str(max(nerve["fibers"][0].axonNodes[0].Vm))
+print "Last Voltage for axon 0: " + str(nerve["fibers"][0].axonNodes[0].Vm[-1])
 print "Done."
