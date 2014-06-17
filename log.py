@@ -1,21 +1,21 @@
 
-INFO    = 'info'
-WARNING = 'warning'
-ERROR   = 'error'
-OFF     = 'off'
+INFO    = 0
+WARNING = 1
+ERROR   = 2
+OFF     = 3
 
-logLevel = 'info'
+logLevel = INFO
 
 def info(s):
-    if logLevel == 'info':
+    if logLevel <= INFO:
         print '[INFO]: ' + s
 
 def warning(s):
-    if logLevel == 'warning':
+    if logLevel <= WARNING:
         print '[WARNING]: ' + s
 
 def error(s):
-    if logLevel == 'error':
+    if logLevel <= ERROR:
         print '[ERROR]: ' + s
 
 def infoVar(v, name):

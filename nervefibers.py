@@ -20,6 +20,20 @@ class AxonPositionNode:
         # each axon in a node is labelled with a number (n). the axon closest to the stimulus is numbered n = 0
         self.index = index
 
+        # Hodgkin-Huxley Parametahs (from the papah!)
+        params = self.params = {
+            "restingVoltage"     : -0.181524014425,      # V_rest (mv)
+            "cm"                 : 1.0,      # µF/cm² membrane capacitance per unit area
+            "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
+            "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
+            "gBarL"              : 0.25,     # mS/cm² leakage current conductance per unit area
+            "sodiumPotential"    : 115.5,    # mV
+            "potassiumPotential" : -11.5,    # mv
+            "leakagePotential"   : 11.1,     # mV
+            "externalResistivity": 300.0,    # Ω•cm
+            "internalResistivity": 110.0     # Ω•cm also called axoplasm resistivity
+        }
+
         # Potassium (K) Channel
         alphaN = self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10.0) - 1) if v != 10 else 0.1)
         betaN = self.betaN  = lambda v: 0.125 * np.exp(-v/80.0)
@@ -34,20 +48,6 @@ class AxonPositionNode:
         alphaH = self.alphaH = lambda v: 0.07 * np.exp(-v/20.0)
         betaH = self.betaH  = lambda v: 1/(np.exp((30-v)/10.0) + 1)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
-
-        # Hodgkin-Huxley Parametahs (from the papah!)
-        params = self.params = {
-            "restingVoltage"     : -0.181524014425,      # V_rest (mv)
-            "cm"                 : 1.0,      # µF/cm² membrane capacitance per unit area
-            "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
-            "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
-            "gBarL"              : 0.25,     # mS/cm² leakage current conductance per unit area
-            "sodiumPotential"    : 115.5,    # mV
-            "potassiumPotential" : -11.5,    # mv
-            "leakagePotential"   : 11.1,     # mV
-            "externalResistivity": 300.0,    # Ω•cm
-            "internalResistivity": 110.0     # Ω•cm also called axoplasm resistivity
-        }
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (µF)
         params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (S)
@@ -70,6 +70,14 @@ class AxonPositionNode:
         log.infoVar(self.m, "self.m")
         log.infoVar(self.h, "self.h")
         log.infoVar(self.n, "self.n")
+
+        def checkGates(gate):
+            if not (0 < gate < 1):
+                log.error("Gating variable is out of range! D:")
+                exit()
+
+        for gate in [self.m, self.h, self.n]:
+            checkGates(gate)
 
         self.m += (self.alphaM(self.Vm[lastVm]) * (1 - self.m) - self.betaM(self.Vm[lastVm])*self.m) * dt
         self.h += (self.alphaH(self.Vm[lastVm]) * (1 - self.h) - self.betaH(self.Vm[lastVm])*self.h) * dt
