@@ -23,15 +23,15 @@ class AxonPositionNode:
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
             "restingVoltage"     : -0.181524014425,      # V_rest (mv)
-            "cm"                 : 1.0,      # µF/cm² membrane capacitance per unit area
+            "cm"                 : 1.0e-3,   # mF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25,     # mS/cm² leakage current conductance per unit area
             "sodiumPotential"    : 115.5,    # mV
             "potassiumPotential" : -11.5,    # mv
             "leakagePotential"   : 11.1,     # mV
-            "externalResistivity": 300.0,    # Ω•cm
-            "internalResistivity": 110.0     # Ω•cm also called axoplasm resistivity
+            "externalResistivity": 300.0e3,  # mΩ•cm
+            "internalResistivity": 110.0e3   # mΩ•cm also called axoplasm resistivity
         }
 
         # Potassium (K) Channel
@@ -49,8 +49,8 @@ class AxonPositionNode:
         betaH = self.betaH  = lambda v: 1/(np.exp((30-v)/10.0) + 1)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
-        params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (µF)
-        params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (S)
+        params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
+        params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
 
         self.Vm    = [params["restingVoltage"]] # The axon node's membrane potential
         self.m     = mInf(params["restingVoltage"])
@@ -101,6 +101,8 @@ class AxonPositionNode:
         surroundingCurrent = (self.params["Ga"] * (neighbourPotential + neighbourExtPotential))
         ionicCurrent = np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
 
+        log.infoVar(neighbourPotential, "neighbourPotential")
+        log.infoVar(neighbourExtPotential, "neighbourExtPotential")
         log.infoVar(sodiumCurrent, "sodiumCurrent")
         log.infoVar(potassiumCurrent, "potassiumCurrent")
         log.infoVar(leakageCurrent, "leakageCurrent")
@@ -119,7 +121,7 @@ class NerveFiber:
     Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
     by myelin). Axonal Length is in centimetres.
     """
-    def __init__(self, x, y, diameter, numNodes, axonalLength=0.00025):
+    def __init__(self, x, y, diameter, numNodes, axonalLength=2.5e-4):
         self.x = x
         self.y = y
         self.diameter = diameter
@@ -311,12 +313,14 @@ def plotCompoundPotential():
 
 ##############
 # Start Script
+# Distances and lengths are in CENTIMETRES
+# Everythin else is in 'milli' units (mA, mF, etc.)
 ##############
 log.logLevel = log.INFO
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 100, # µA. the current applied at the surface
+    "magnitude" : 1000, # mA. the current applied at the surface
     "x"         : 0,     # cm
     "y"         : 10,    # cm
     "z"         : 0      # cm
