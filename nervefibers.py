@@ -4,6 +4,7 @@
 import numpy as np
 import pylab
 import random
+import log
 
 class AxonPositionNode:
     """
@@ -66,9 +67,9 @@ class AxonPositionNode:
         leakageConductance   = self.params["gBarL"]
 
         # integrate the equations on m, h, and n
-        varPrint(self.m, "self.m")
-        varPrint(self.h, "self.h")
-        varPrint(self.n, "self.n")
+        log.infoVar(self.m, "self.m")
+        log.infoVar(self.h, "self.h")
+        log.infoVar(self.n, "self.n")
 
         self.m += (self.alphaM(self.Vm[lastVm]) * (1 - self.m) - self.betaM(self.Vm[lastVm])*self.m) * dt
         self.h += (self.alphaH(self.Vm[lastVm]) * (1 - self.h) - self.betaH(self.Vm[lastVm])*self.h) * dt
@@ -92,21 +93,42 @@ class AxonPositionNode:
         surroundingCurrent = (self.params["Ga"] * (neighbourPotential + neighbourExtPotential))
         ionicCurrent = np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
 
-        varPrint(sodiumCurrent, "sodiumCurrent")
-        varPrint(potassiumCurrent, "potassiumCurrent")
-        varPrint(leakageCurrent, "leakageCurrent")
+        log.infoVar(sodiumCurrent, "sodiumCurrent")
+        log.infoVar(potassiumCurrent, "potassiumCurrent")
+        log.infoVar(leakageCurrent, "leakageCurrent")
 
         newV = self.Vm[lastVm]
         newV += (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent)
 
-        varPrint(surroundingCurrent, "surroundingCurrent")
-        varPrint(ionicCurrent, "ionicCurrent")
-        varPrint(newV, "newV")
+        log.infoVar(surroundingCurrent, "surroundingCurrent")
+        log.infoVar(ionicCurrent, "ionicCurrent")
+        log.infoVar(newV, "newV")
 
         self.Vm.append(newV)
 
-def varPrint(v, name):
-    print name + ": " + str(v)
+class NerveFiber:
+    """
+    Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
+    by myelin). Axonal Length is in centimetres.
+    """
+    def __init__(self, x, y, diameter, numNodes, axonalLength=0.00025):
+        self.x = x
+        self.y = y
+        self.diameter = diameter
+        self.internodalLength = internodalLength = diameter * 100 # McNeal (1976)
+
+        axonalDiameter = self.axonalDiameter = 0.7 * diameter
+        axonNodes = self.axonNodes = []
+        for i in range(0, numNodes):
+            axonNode = AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, axonalLength, i, internodalLength)
+
+            nodePos = (self.x, self.y, axonNode.z)  # (x, y, z)
+            currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
+
+            # distance from stimulus
+            distance = getDistance(nodePos[0], nodePos[1], nodePos[2], currPos[0], currPos[1], currPos[2])
+            axonNode.distance = distance
+            axonNodes.append(axonNode)
 
 ### Simulayshun
 class NerveBundleSimulation:
@@ -118,7 +140,7 @@ class NerveBundleSimulation:
     def simulate(self, nerve, stimulusCurrent):
         for t in range(1, len(self.timeLine)):
             # if self.timeLine[t] % 1 == 0.0:
-            #     print "Simulation Time: " + str(self.timeLine[t])
+            #     log.info("Simulation Time: " + str(self.timeLine[t]))
 
             for i, fiber in enumerate(nerve["fibers"]): # for each nerve fiber
                 for k, axonNode in enumerate(fiber.axonNodes): # for each node in the fiber
@@ -139,7 +161,7 @@ class NerveBundleSimulation:
 
                     # step the current axon forward IN TIIIME ♪♪
                     # print "Stepping axon #" + str(k) + " in fiber #" + str(i)
-                    print "========"
+                    log.info("========")
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
                     if t == 2:
                         exit()
@@ -283,10 +305,11 @@ def plotCompoundPotential():
 ##############
 # Start Script
 ##############
+log.logLevel = log.INFO_LEVEL
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 0, # µA. the current applied at the surface
+    "magnitude" : 10, # µA. the current applied at the surface
     "x"         : 0,     # cm
     "y"         : 10,    # cm
     "z"         : 0      # cm
@@ -305,30 +328,6 @@ nerve = {
     "maxFiberDiam" : 0.05  # cm
 }
 
-class NerveFiber:
-    """
-    Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
-    by myelin). Axonal Length is in centimetres.
-    """
-    def __init__(self, x, y, diameter, numNodes, axonalLength=0.00025):
-        self.x = x
-        self.y = y
-        self.diameter = diameter
-        self.internodalLength = internodalLength = diameter * 100 # McNeal (1976)
-
-        axonalDiameter = self.axonalDiameter = 0.7 * diameter
-        axonNodes = self.axonNodes = []
-        for i in range(0, numNodes):
-            axonNode = AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, axonalLength, i, internodalLength)
-
-            nodePos = (self.x, self.y, axonNode.z)  # (x, y, z)
-            currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
-
-            # distance from stimulus
-            distance = getDistance(nodePos[0], nodePos[1], nodePos[2], currPos[0], currPos[1], currPos[2])
-            axonNode.distance = distance
-            axonNodes.append(axonNode)
-
 # Create and place the axons
 print "Creating bundle of fibers..."
 for i in range(0, nerve["numFibers"]):
@@ -339,11 +338,10 @@ print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
 # fiber = nerve["fibers"][0]
 # for i, axonNode in enumerate(fiber.axonNodes):
-#     print "=================" + str(i)
-#     print "Node's z position: " + str(axonNode.z)
-#     print "Node's diameter: " + str(axonNode.diameter)
-#     print "Node's index: " + str(axonNode.index)
-
+#     log.info("=================" + str(i))
+#     log.info("Node's z position: " + str(axonNode.z))
+#     log.info("Node's diameter: " + str(axonNode.diameter))
+#     log.info("Node's index: " + str(axonNode.index))
 
 T    = 55    # ms
 dt   = 0.025 # ms
