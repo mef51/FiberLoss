@@ -1,8 +1,8 @@
 
-INFO_LEVEL    = 'info'
-WARNING_LEVEL = 'warning'
-ERROR_LEVEL   = 'error'
-OFF_LEVEL     = 'off'
+INFO    = 'info'
+WARNING = 'warning'
+ERROR   = 'error'
+OFF     = 'off'
 
 logLevel = 'info'
 

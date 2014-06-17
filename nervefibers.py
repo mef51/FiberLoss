@@ -162,9 +162,8 @@ class NerveBundleSimulation:
                     # step the current axon forward IN TIIIME ♪♪
                     # print "Stepping axon #" + str(k) + " in fiber #" + str(i)
                     log.info("========")
+                    log.infoVar(t*dt, 'time')
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
-                    if t == 2:
-                        exit()
 
 # represents a square wave current strimulus
 def getCurrent(t, current, tPulseStart=5, pulseWidth=25):
@@ -305,11 +304,11 @@ def plotCompoundPotential():
 ##############
 # Start Script
 ##############
-log.logLevel = log.INFO_LEVEL
+log.logLevel = log.INFO
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 10, # µA. the current applied at the surface
+    "magnitude" : 100, # µA. the current applied at the surface
     "x"         : 0,     # cm
     "y"         : 10,    # cm
     "z"         : 0      # cm
