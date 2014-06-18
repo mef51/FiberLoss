@@ -36,26 +36,40 @@ class AxonPositionNode:
 
         # Potassium (K) Channel
         alphaN = self.alphaN = np.vectorize(lambda v: ( 0.01*(v+55) ) / ( 1 - np.exp(-(v+55)/10.0) ))
-        betaN = self.betaN  = lambda v: 0.125 * np.exp(-(v+65)/80.0)
+        betaN = self.betaN  = np.vectorize( lambda v: 0.125 * np.exp(-(v+65)/80.0))
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         # Sodium (Na) Channel (activating)
         alphaM = self.alphaM = np.vectorize( lambda v: (0.1 * (v + 40.0)) / (1 - np.exp( -(v+40)/10.0 )) )
-        betaM = self.betaM = lambda v: 4 * np.exp( -(v+65)/18.0 )
+        betaM = self.betaM = np.vectorize( lambda v: 4 * np.exp( -(v+65)/18.0 ))
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 
         # Sodium (Na) Channel (inactivating)
-        alphaH = self.alphaH = lambda v: 0.07 * np.exp( -(v+65)/20.0 )
-        betaH = self.betaH = lambda v: 1.0/( 1 + np.exp(-(v+35)/10.0) )
+        alphaH = self.alphaH = np.vectorize( lambda v: 0.07 * np.exp( -(v+65)/20.0 ))
+        betaH = self.betaH = np.vectorize( lambda v: 1.0/( 1 + np.exp(-(v+35)/10.0) ))
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
         params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
 
-        self.Vm    = [params["restingVoltage"]] # The axon node's membrane potential
-        self.m     = mInf(params["restingVoltage"])
-        self.h     = hInf(params["restingVoltage"])
-        self.n     = nInf(params["restingVoltage"])
+        self.Vm = [params["restingVoltage"]] # The axon node's membrane potential
+        self.m  = mInf(params["restingVoltage"])
+        self.h  = hInf(params["restingVoltage"])
+        self.n  = nInf(params["restingVoltage"])
+
+        self.plotAlphaBetaFunctions()
+
+    def plotAlphaBetaFunctions(self):
+        v = np.arange(-75, 125) # millivolts
+        pylab.figure()
+        pylab.xlim([-75, 125])
+        pylab.plot(v, self.alphaM(v), v, self.alphaH(v), v, self.alphaN(v), v, self.betaM(v), v, self.betaH(v), v, self.betaN(v))
+        pylab.legend(('alphaM', 'alphaH', 'alphaN', 'betaM', 'betaH', 'betaN'))
+        pylab.title('Alpha and Beta Functions')
+        pylab.ylabel(u'Rate Constant (ms^-1)')
+        pylab.xlabel('Voltage (mV)')
+        pylab.show()
+        pylab.savefig('alphaBetaFunctions.jpg')
 
     # integrate response to stimulus current `stimulus`
     def step(self, stimulus, leftNode, rightNode, dt):
@@ -320,7 +334,7 @@ log.logLevel = log.INFO
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 1000, # mA. the current applied at the surface
+    "magnitude" : 12e-3, # mA. the current applied at the surface
     "x"         : 0,     # cm
     "y"         : 10,    # cm
     "z"         : 0      # cm
