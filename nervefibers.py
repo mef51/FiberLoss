@@ -22,7 +22,7 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : -0.181524014425,      # V_rest (mv)
+            "restingVoltage"     : -65.5,    # V_rest (mv)
             "cm"                 : 1.0e-3,   # mF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
@@ -35,18 +35,18 @@ class AxonPositionNode:
         }
 
         # Potassium (K) Channel
-        alphaN = self.alphaN = np.vectorize(lambda v: 0.01*(10 - v) / (np.exp((10-v)/10.0) - 1) if v != 10 else 0.1)
-        betaN = self.betaN  = lambda v: 0.125 * np.exp(-v/80.0)
+        alphaN = self.alphaN = np.vectorize(lambda v: ( 0.01*(v+55) ) / ( 1 - np.exp(-(v+55)/10.0) ))
+        betaN = self.betaN  = lambda v: 0.125 * np.exp(-(v+65)/80.0)
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         # Sodium (Na) Channel (activating)
-        alphaM = self.alphaM = np.vectorize(lambda v: 0.1*(25-v) / (np.exp((25-v)/10.0) - 1) if v!= 25 else 1.0)
-        betaM = self.betaM = lambda v: 4 * np.exp(-v/18.0)
+        alphaM = self.alphaM = np.vectorize( lambda v: (0.1 * (v + 40.0)) / (1 - np.exp( -(v+40)/10.0 )) )
+        betaM = self.betaM = lambda v: 4 * np.exp( -(v+65)/18.0 )
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 
         # Sodium (Na) Channel (inactivating)
-        alphaH = self.alphaH = lambda v: 0.07 * np.exp(-v/20.0)
-        betaH = self.betaH  = lambda v: 1/(np.exp((30-v)/10.0) + 1)
+        alphaH = self.alphaH = lambda v: 0.07 * np.exp( -(v+65)/20.0 )
+        betaH = self.betaH = lambda v: 1.0/( 1 + np.exp(-(v+35)/10.0) )
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
