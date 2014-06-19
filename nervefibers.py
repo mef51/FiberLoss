@@ -5,6 +5,16 @@ import numpy as np
 import pylab
 import random
 import log
+from unum.units import *
+from unum import Unum
+
+## Setup Units
+mV = Unum.unit('mV', 10**-3 * V) # millivolts
+mF = Unum.unit('mF', 10**-3 * F) # milliFarads
+uF = Unum.unit('uF', 10**-6 * F) # microFarads
+
+mS = Unum.unit('mS', 10**-3 * S) # milliSiemens
+mohm = Unum.unit('mohm', 10**-3 * ohm) # milliohms
 
 class AxonPositionNode:
     """
@@ -22,31 +32,33 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : -8.67462991164,    # V_rest (mv)
-            "cm"                 : 1.0,      # mF/cm² membrane capacitance per unit area (should really be 1.0e-3)
-            "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
-            "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
-            "gBarL"              : 0.25,     # mS/cm² leakage current conductance per unit area
-            "sodiumPotential"    : 115.5,    # mV
-            "potassiumPotential" : -11.5,    # mv
-            "leakagePotential"   : 11.1,     # mV
-            "externalResistivity": 300.0e3,  # mΩ•cm
-            "internalResistivity": 110.0e3   # mΩ•cm also called axoplasm resistivity
+            "restingVoltage"     : -8.6746 *mV,         # V_rest (mv)
+            "cm"                 : 1.0     *mF/(cm**2), # mF/cm² membrane capacitance per unit area (should really be 1.0e-3)
+            "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
+            "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
+            "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
+            "sodiumPotential"    : 115.5   *mV,         # mV
+            "potassiumPotential" : -11.5   *mV,         # mv
+            "leakagePotential"   : 11.1    *mV,         # mV
+            "externalResistivity": 300.0e3 *mohm*cm,    # mΩ•cm
+            "internalResistivity": 110.0e3 *mohm*cm     # mΩ•cm also called axoplasm resistivity
         }
 
         # Potassium (K) Channel
-        alphaN = self.alphaN = np.vectorize(lambda v: ( 0.01*(v+55) ) / ( 1 - np.exp(-(v+55)/10.0) ))
-        betaN = self.betaN  = np.vectorize( lambda v: 0.125 * np.exp(-(v+65)/80.0))
+        alphaN = self.alphaN = np.vectorize(lambda v: ( 0.01*(v+55*mV) ) / ( 1 - np.exp(-(v+55*mV)/(10.0*mV)) ))
+        betaN = self.betaN  = np.vectorize( lambda v: 0.125 * np.exp(-(v+65*mV)/80.0*mV))
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         # Sodium (Na) Channel (activating)
-        alphaM = self.alphaM = np.vectorize( lambda v: (0.1 * (v + 40.0)) / (1 - np.exp( -(v+40)/10.0 )) )
-        betaM = self.betaM = np.vectorize( lambda v: 4 * np.exp( -(v+65)/18.0 ))
+        alphaM = self.alphaM = np.vectorize( lambda v: (0.1 * (v + 40.0*mV)) / (1 - np.exp( -(v+40*mV)/(10.0*mV) )) )
+        betaM = self.betaM = np.vectorize( lambda v: 4 * np.exp( -(v+65*mV)/18.0*mV ))
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
+        alphaN(2)
 
+        alphaM(2)
         # Sodium (Na) Channel (inactivating)
-        alphaH = self.alphaH = np.vectorize( lambda v: 0.07 * np.exp( -(v+65)/20.0 ))
-        betaH = self.betaH = np.vectorize( lambda v: 1.0/( 1 + np.exp(-(v+35)/10.0) ))
+        alphaH = self.alphaH = np.vectorize( lambda v: 0.07 * np.exp( -(v+65*mV)/20.0*mV ))
+        betaH = self.betaH = np.vectorize( lambda v: 1.0/( 1 + np.exp(-(v+35*mV)/10.0*mV) ))
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
@@ -132,7 +144,7 @@ class NerveFiber:
     Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
     by myelin). Axonal Length is in centimetres.
     """
-    def __init__(self, x, y, diameter, numNodes, axonalLength=2.5e-4):
+    def __init__(self, x, y, diameter, numNodes, axonalLength=2.5e-4*cm):
         self.x = x
         self.y = y
         self.diameter = diameter
@@ -332,23 +344,23 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 12, # mA. the current applied at the surface
-    "x"         : 0,     # cm
-    "y"         : 10,    # cm
-    "z"         : 0      # cm
+    "magnitude" : 12 *mA,    # mA. the current applied at the surface
+    "x"         : 0  *cm,    # cm
+    "y"         : 10 *cm,    # cm
+    "z"         : 0  *cm     # cm
 }
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
-    "numFibers"   : 1,
-    "numNodes"    : 1,    # the number of axon nodes each fiber has
-    "fibers"      : [],
-    "radius"      : 0.2,   # cm
-    "x"           : 0.0,   # cm
-    "y"           : 0.0,   # cm
-    "z"           : 0.0,   # cm
-    "minFiberDiam" : 0.01, # cm
-    "maxFiberDiam" : 0.05  # cm
+    "numFibers"    : 1,
+    "numNodes"     : 1,    # the number of axon nodes each fiber has
+    "fibers"       : [],
+    "radius"       : 0.2  *cm, # cm
+    "x"            : 0.0  *cm, # cm
+    "y"            : 0.0  *cm, # cm
+    "z"            : 0.0  *cm, # cm
+    "minFiberDiam" : 0.01 *cm, # cm
+    "maxFiberDiam" : 0.05 *cm  # cm
 }
 
 # Create and place the axons
@@ -366,8 +378,8 @@ print "Placed " + str(len(nerve["fibers"])) + " fibers."
 #     log.info("Node's diameter: " + str(axonNode.diameter))
 #     log.info("Node's index: " + str(axonNode.index))
 
-T    = 55    # ms
-dt   = 0.025 # ms
+T    = 55*ms    # ms
+dt   = 0.025*ms # ms
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
