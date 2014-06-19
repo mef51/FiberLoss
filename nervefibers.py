@@ -22,8 +22,8 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : -65.5,    # V_rest (mv)
-            "cm"                 : 1.0e-3,   # mF/cm² membrane capacitance per unit area
+            "restingVoltage"     : -8.67462991164,    # V_rest (mv)
+            "cm"                 : 1.0,      # mF/cm² membrane capacitance per unit area (should really be 1.0e-3)
             "gBarNa"             : 120.0,    # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0,     # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25,     # mS/cm² leakage current conductance per unit area
@@ -57,8 +57,6 @@ class AxonPositionNode:
         self.h  = hInf(params["restingVoltage"])
         self.n  = nInf(params["restingVoltage"])
 
-        self.plotAlphaBetaFunctions()
-
     def plotAlphaBetaFunctions(self):
         v = np.arange(-75, 125) # millivolts
         pylab.figure()
@@ -68,7 +66,6 @@ class AxonPositionNode:
         pylab.title('Alpha and Beta Functions')
         pylab.ylabel(u'Rate Constant (ms^-1)')
         pylab.xlabel('Voltage (mV)')
-        pylab.show()
         pylab.savefig('alphaBetaFunctions.jpg')
 
     # integrate response to stimulus current `stimulus`
@@ -330,11 +327,12 @@ def plotCompoundPotential():
 # Distances and lengths are in CENTIMETRES
 # Everythin else is in 'milli' units (mA, mF, etc.)
 ##############
-log.logLevel = log.INFO
+log.logLevel = log.ERROR
+# log.logLevel = log.INFO
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 12e-3, # mA. the current applied at the surface
+    "magnitude" : 12, # mA. the current applied at the surface
     "x"         : 0,     # cm
     "y"         : 10,    # cm
     "z"         : 0      # cm
