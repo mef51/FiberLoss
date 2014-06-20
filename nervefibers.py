@@ -45,20 +45,18 @@ class AxonPositionNode:
         }
 
         # Potassium (K) Channel
-        alphaN = self.alphaN = np.vectorize(lambda v: ( 0.01*(v+55*mV) ) / ( 1 - np.exp(-(v+55*mV)/(10.0*mV)) ))
-        betaN = self.betaN  = np.vectorize( lambda v: 0.125 * np.exp(-(v+65*mV)/80.0*mV))
+        alphaN = self.alphaN = np.vectorize(lambda v: (0.01*(1/(ms*mV)) * (v+55*mV)) / ( 1 - np.exp((-(v+55*mV)/(10.0*mV)).asNumber())))
+        betaN = self.betaN  = np.vectorize( lambda v: 0.125*(1/ms) * np.exp((-(v+65*mV)/(80.0*mV)).asNumber() ))
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         # Sodium (Na) Channel (activating)
-        alphaM = self.alphaM = np.vectorize( lambda v: (0.1 * (v + 40.0*mV)) / (1 - np.exp( -(v+40*mV)/(10.0*mV) )) )
-        betaM = self.betaM = np.vectorize( lambda v: 4 * np.exp( -(v+65*mV)/18.0*mV ))
+        alphaM = self.alphaM = np.vectorize( lambda v: (0.1*(1/(ms*mV)) * (v+40.0*mV)) / (1 - np.exp((-(v+40*mV)/(10.0*mV)).asNumber())))
+        betaM = self.betaM = np.vectorize( lambda v: 4*(1/ms) * np.exp( (-(v+65*mV)/(18.0*mV)).asNumber() ))
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
-        alphaN(2)
 
-        alphaM(2)
         # Sodium (Na) Channel (inactivating)
-        alphaH = self.alphaH = np.vectorize( lambda v: 0.07 * np.exp( -(v+65*mV)/20.0*mV ))
-        betaH = self.betaH = np.vectorize( lambda v: 1.0/( 1 + np.exp(-(v+35*mV)/10.0*mV) ))
+        alphaH = self.alphaH = np.vectorize( lambda v: 0.07*(1/ms) * np.exp( (-(v+65*mV)/(20.0*mV)).asNumber() ))
+        betaH = self.betaH = np.vectorize( lambda v: 1.0*(1/ms)/( 1 + np.exp((-(v+35*mV)/(10.0*mV)).asNumber())))
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
@@ -113,9 +111,10 @@ class AxonPositionNode:
 
         # MCNEALLLLLL (1976)
         def extV(stimulus, distance): # the external potential
-            if distance == 0:
-                return 0.0
+            if distance.asNumber() == 0:
+                return 0.0*mV
             else:
+                v = (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
                 return (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
 
         neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * self.Vm[lastVm]) # V_n-1 + V_n+1 - 2Vn
@@ -165,10 +164,10 @@ class NerveFiber:
 
 ### Simulayshun
 class NerveBundleSimulation:
-    def __init__(self, T=55, dt=0.025):
+    def __init__(self, T=55*ms, dt=0.025*ms):
         self.T = T
         self.dt = dt
-        self.timeLine = np.arange(0, T+dt, dt)
+        self.timeLine = np.arange(0, (T+dt).asNumber(), dt.asNumber())
 
     def simulate(self, nerve, stimulusCurrent):
         for t in range(1, len(self.timeLine)):
@@ -181,8 +180,8 @@ class NerveBundleSimulation:
                     effectiveCurrent = getCurrent(t*self.dt, stimulusCurrent["magnitude"])
 
                     lastStep = len(axonNode.Vm) - 1
-                    leftNode = {"V": 0, "d": 0}
-                    rightNode = {"V": 0, "d": 0}
+                    leftNode = {"V": 0*mV, "d": 0*cm}
+                    rightNode = {"V": 0*mV, "d": 0*cm}
 
                     if (k-1) > -1:
                         leftNode["V"] = fiber.axonNodes[k-1].Vm[lastStep]
@@ -199,17 +198,17 @@ class NerveBundleSimulation:
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
 
 # represents a square wave current strimulus
-def getCurrent(t, current, tPulseStart=5, pulseWidth=25):
+def getCurrent(t, current, tPulseStart=5*ms, pulseWidth=25*ms):
     if tPulseStart <= t <= (tPulseStart + pulseWidth):
         return current
     else:
-        return 0.0
+        return 0.0*mA
 
 def getDistance(x1, y1, z1, x2, y2, z2):
     x = abs(x1 - x2)
     y = abs(y1 - y2)
     z = abs(z1 - z2)
-    return np.sqrt(x**2 + y**2 + z**2)
+    return np.sqrt((x**2 + y**2 + z**2).asNumber() ) * (cm)
 
 # Places a nerve fiber and makes sure it doesn't overlap with any other nerve fibers in the nerve bundle
 # returns true if it succeeds, false otherwise
