@@ -17,4 +17,9 @@ Status: Not Finished
 
 Papers
 ======
-For details on the science this is based off of or related to look at [CAPFiberLoss.pdf](CAPFiberLoss.pdf) and the papers in the [Related/](Related/) folder.
+This work is mostly based off of the theory in these two papers:
+
+* [Analysis of a Model for Excitation of Myelinated Nerve (Mcneal 1976)](papers/McNealModel.pdf)
+* [Coupled left-shift of Nav channels (Boucher, Joos, Morris, 2012)](papers/BoucherCLS.pdf)
+
+For more details on the science this is based off of or related to look at [papers/CAPFiberLoss.pdf](CAPFiberLoss.pdf) and the papers in the [papers/](papers/) folder.
