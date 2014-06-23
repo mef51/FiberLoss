@@ -5,8 +5,10 @@ import numpy as np
 import pylab
 import random
 import log
+
 from unum.units import *
 from unum import Unum
+# from fastunits import *
 
 ## Setup Units
 mV = Unum.unit('mV', 10**-3 * V) # millivolts
@@ -45,18 +47,18 @@ class AxonPositionNode:
         }
 
         # Potassium (K) Channel
-        alphaN = self.alphaN = np.vectorize(lambda v: (0.01*(1/(ms*mV)) * (v+55*mV)) / ( 1 - np.exp((-(v+55*mV)/(10.0*mV)).asNumber())))
-        betaN = self.betaN  = np.vectorize( lambda v: 0.125*(1/ms) * np.exp((-(v+65*mV)/(80.0*mV)).asNumber() ))
+        alphaN = self.alphaN = np.vectorize(lambda v: (0.01*(1/(ms*mV)) * (v+55*mV)) / ( 1 - np.exp(float(-(v+55*mV)/(10.0*mV)))))
+        betaN = self.betaN  = np.vectorize( lambda v: 0.125*(1/ms) * np.exp(float(-(v+65*mV)/(80.0*mV)) ))
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         # Sodium (Na) Channel (activating)
-        alphaM = self.alphaM = np.vectorize( lambda v: (0.1*(1/(ms*mV)) * (v+40.0*mV)) / (1 - np.exp((-(v+40*mV)/(10.0*mV)).asNumber())))
-        betaM = self.betaM = np.vectorize( lambda v: 4*(1/ms) * np.exp( (-(v+65*mV)/(18.0*mV)).asNumber() ))
+        alphaM = self.alphaM = np.vectorize( lambda v: (0.1*(1/(ms*mV)) * (v+40.0*mV)) / (1 - np.exp(float(-(v+40*mV)/(10.0*mV)))))
+        betaM = self.betaM = np.vectorize( lambda v: 4*(1/ms) * np.exp( float(-(v+65*mV)/(18.0*mV)) ))
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 
         # Sodium (Na) Channel (inactivating)
-        alphaH = self.alphaH = np.vectorize( lambda v: 0.07*(1/ms) * np.exp( (-(v+65*mV)/(20.0*mV)).asNumber() ))
-        betaH = self.betaH = np.vectorize( lambda v: 1.0*(1/ms)/( 1 + np.exp((-(v+35*mV)/(10.0*mV)).asNumber())))
+        alphaH = self.alphaH = np.vectorize( lambda v: 0.07*(1/ms) * np.exp( float(-(v+65*mV)/(20.0*mV)) ))
+        betaH = self.betaH = np.vectorize( lambda v: 1.0*(1/ms)/( 1 + np.exp(float(-(v+35*mV)/(10.0*mV)))))
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
@@ -111,7 +113,7 @@ class AxonPositionNode:
 
         # MCNEALLLLLL (1976)
         def extV(stimulus, distance): # the external potential
-            if distance.asNumber() == 0:
+            if float(distance/cm) == 0:
                 return 0.0*mV
             else:
                 v = (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
@@ -167,12 +169,12 @@ class NerveBundleSimulation:
     def __init__(self, T=55*ms, dt=0.025*ms):
         self.T = T
         self.dt = dt
-        self.timeLine = np.arange(0, (T+dt).asNumber(), dt.asNumber())
+        self.timeLine = np.arange(0, float((T+dt)/ms), float(dt/ms))
 
     def simulate(self, nerve, stimulusCurrent):
         for t in range(1, len(self.timeLine)):
-            # if self.timeLine[t] % 1 == 0.0:
-            #     log.info("Simulation Time: " + str(self.timeLine[t]))
+            if self.timeLine[t] % 1 == 0.0:
+                print "Simulation Time: " + str(self.timeLine[t])
 
             for i, fiber in enumerate(nerve["fibers"]): # for each nerve fiber
                 for k, axonNode in enumerate(fiber.axonNodes): # for each node in the fiber
@@ -208,7 +210,7 @@ def getDistance(x1, y1, z1, x2, y2, z2):
     x = abs(x1 - x2)
     y = abs(y1 - y2)
     z = abs(z1 - z2)
-    return np.sqrt((x**2 + y**2 + z**2).asNumber() ) * (cm)
+    return np.sqrt(float((x**2 + y**2 + z**2)/(cm*cm))) * (cm)
 
 # Places a nerve fiber and makes sure it doesn't overlap with any other nerve fibers in the nerve bundle
 # returns true if it succeeds, false otherwise
@@ -308,11 +310,21 @@ def plotClosestAxons():
 
         print "plotting axon #" + str(i) + "..."
         pylab.figure()
-        pylab.plot(simulation.timeLine, node.Vm, simulation.timeLine, curr)
+
+        # strip out units
+        Vm = [float(v/mV) for v in node.Vm]
+        print curr
+        curr = [float(c/mA) for c in curr]
+        print curr
+        print node.Vm
+        print Vm
+
+        # plot
+        pylab.plot(simulation.timeLine, Vm, simulation.timeLine, curr)
         pylab.title('Axon #' + str(i) + ": Distance = " + str(node.distance) + " cm")
         pylab.ylabel('Membrane Potential (mV)')
         pylab.xlabel('Time (msec)')
-        pylab.savefig("axons/axon" + str(i) + ".jpg")
+        pylab.savefig("graphs/axons/axon" + str(i) + ".jpg")
         pylab.close()
 
 def plotCompoundPotential():
