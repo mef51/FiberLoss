@@ -6,9 +6,9 @@ import pylab
 import random
 import log
 
-from unum.units import *
-from unum import Unum
-# from fastunits import *
+# from unum.units import *
+# from unum import Unum
+from fastunits import *
 
 ## Setup Units
 mV = Unum.unit('mV', 10**-3 * V) # millivolts
@@ -69,17 +69,6 @@ class AxonPositionNode:
         self.h  = hInf(params["restingVoltage"])
         self.n  = nInf(params["restingVoltage"])
 
-    def plotAlphaBetaFunctions(self):
-        v = np.arange(-75, 125) # millivolts
-        pylab.figure()
-        pylab.xlim([-75, 125])
-        pylab.plot(v, self.alphaM(v), v, self.alphaH(v), v, self.alphaN(v), v, self.betaM(v), v, self.betaH(v), v, self.betaN(v))
-        pylab.legend(('alphaM', 'alphaH', 'alphaN', 'betaM', 'betaH', 'betaN'))
-        pylab.title('Alpha and Beta Functions')
-        pylab.ylabel(u'Rate Constant (ms^-1)')
-        pylab.xlabel('Voltage (mV)')
-        pylab.savefig('alphaBetaFunctions.jpg')
-
     # integrate response to stimulus current `stimulus`
     def step(self, stimulus, leftNode, rightNode, dt):
         I = stimulus # I[i-1]
@@ -139,6 +128,17 @@ class AxonPositionNode:
         log.infoVar(newV, "newV")
 
         self.Vm.append(newV)
+
+    def plotAlphaBetaFunctions(self):
+        v = np.arange(-75, 125) # millivolts
+        pylab.figure()
+        pylab.xlim([-75, 125])
+        pylab.plot(v, self.alphaM(v), v, self.alphaH(v), v, self.alphaN(v), v, self.betaM(v), v, self.betaH(v), v, self.betaN(v))
+        pylab.legend(('alphaM', 'alphaH', 'alphaN', 'betaM', 'betaH', 'betaN'))
+        pylab.title('Alpha and Beta Functions')
+        pylab.ylabel(u'Rate Constant (ms^-1)')
+        pylab.xlabel('Voltage (mV)')
+        pylab.savefig('alphaBetaFunctions.jpg')
 
 class NerveFiber:
     """
