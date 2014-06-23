@@ -22,4 +22,4 @@ This work is mostly based off of the theory in these two papers:
 * [Analysis of a Model for Excitation of Myelinated Nerve (Mcneal 1976)](papers/McNealModel.pdf)
 * [Coupled left-shift of Nav channels (Boucher, Joos, Morris, 2012)](papers/BoucherCLS.pdf)
 
-For more details on the science this is based off of or related to look at [papers/CAPFiberLoss.pdf](CAPFiberLoss.pdf) and the papers in the [papers/](papers/) folder.
+For more details on the science this is based off of or some related papers take a look at the [papers/](papers/) folder.
