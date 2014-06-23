@@ -6,9 +6,13 @@ import pylab
 import random
 import log
 
-# from unum.units import *
-# from unum import Unum
-from fastunits import *
+USE_UNITS = False
+
+if USE_UNITS:
+    from unum.units import *
+    from unum import Unum
+else:
+    from fastunits import *
 
 ## Setup Units
 mV = Unum.unit('mV', 10**-3 * V) # millivolts
@@ -313,11 +317,7 @@ def plotClosestAxons():
 
         # strip out units
         Vm = [float(v/mV) for v in node.Vm]
-        print curr
         curr = [float(c/mA) for c in curr]
-        print curr
-        print node.Vm
-        print Vm
 
         # plot
         pylab.plot(simulation.timeLine, Vm, simulation.timeLine, curr)
