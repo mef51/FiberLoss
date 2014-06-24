@@ -6,7 +6,7 @@ import pylab
 import random
 import log
 
-USE_UNITS = False
+USE_UNITS = True
 
 if USE_UNITS:
     from unum.units import *
@@ -279,29 +279,52 @@ def placeFiberInNerve(nerve, maxAttempts = 1000):
 # Some Plotting Functions
 ##########################
 
-def plotPositions(plotStimulusPos=True):
+def plotNodePositions():
+    z = []
+    y = []
+
+    pylab.scatter(z, y, color='r', marker='o')
+    pylab.ylabel('y (cm)')
+    pylab.xlabel('z (cm)')
+    xSpan = float(nerve["fibers"][0].internodalLength*nerve["numNodes"]/cm)
+    ySpan = float(nerve["fibers"][0].diameter/cm) + abs(float(nerve["fibers"][0].y/cm))
+    pylab.xlim([-xSpan, xSpan])
+    pylab.ylim([-ySpan, ySpan])
+
+    for i, fiber in enumerate(nerve["fibers"]):
+        for j, node in enumerate(fiber.axonNodes):
+            newZ = float(node.z/cm)
+            newY = float(fiber.y/cm)
+            z.append(newZ)
+            y.append(newY)
+            rectangle = pylab.Rectangle((newZ,newY), float(node.length/cm), float(node.diameter/cm), alpha=0.5)
+            pylab.gca().add_artist(rectangle)
+
+    pylab.show()
+
+def plotCrossSectionPositions(plotStimulusPos=True):
     x = []
     y = []
     for i in range(0, len(nerve["fibers"])):
-        x.append(nerve["fibers"][i].x)
-        y.append(nerve["fibers"][i].y)
+        x.append(float(nerve["fibers"][i].x/cm))
+        y.append(float(nerve["fibers"][i].y/cm))
 
     if plotStimulusPos:
-        x.append(stimulusCurrent["x"])
-        y.append(stimulusCurrent["y"])
+        x.append(float(stimulusCurrent["x"]/cm))
+        y.append(float(stimulusCurrent["y"]/cm))
 
     pylab.scatter(x, y, color='r', marker='o', s=0)
     pylab.ylabel('y (cm)')
     pylab.xlabel('x (cm)')
     pylab.axis('equal')
     for i in range(0, len(nerve["fibers"])):
-        circle = pylab.Circle((x[i],y[i]), nerve["fibers"][i].diameter/2.0, alpha=0.5)
+        circle = pylab.Circle((x[i],y[i]), float(nerve["fibers"][i].diameter/(2.0*cm)), alpha=0.5)
         pylab.gca().add_artist(circle)
 
     if plotStimulusPos:
-        pylab.axhline(y = stimulusCurrent["y"], color='k', linestyle='--')
-        pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]-0.5, "inside")
-        pylab.text(stimulusCurrent["x"]-4, stimulusCurrent["y"]+0.2, "outside")
+        pylab.axhline(y = float(stimulusCurrent["y"]/cm), color='k', linestyle='--')
+        pylab.text(float(stimulusCurrent["x"]/cm)-4, float(stimulusCurrent["y"]/cm)-0.5, "inside")
+        pylab.text(float(stimulusCurrent["x"]/cm)-4, float(stimulusCurrent["y"]/cm)+0.2, "outside")
     pylab.show()
 
 # plots the membrane potential of the axons closest to the stimulus
@@ -363,7 +386,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 1,    # the number of axon nodes each fiber has
+    "numNodes"     : 10,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2  *cm, # cm
     "x"            : 0.0  *cm, # cm
@@ -382,12 +405,8 @@ for i in range(0, nerve["numFibers"]):
         break
 print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
-# fiber = nerve["fibers"][0]
-# for i, axonNode in enumerate(fiber.axonNodes):
-#     log.info("=================" + str(i))
-#     log.info("Node's z position: " + str(axonNode.z))
-#     log.info("Node's diameter: " + str(axonNode.diameter))
-#     log.info("Node's index: " + str(axonNode.index))
+plotNodePositions()
+exit()
 
 T    = 55*ms    # ms
 dt   = 0.025*ms # ms
