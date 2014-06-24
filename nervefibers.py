@@ -149,7 +149,7 @@ class NerveFiber:
     Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
     by myelin). Axonal Length is in centimetres.
     """
-    def __init__(self, x, y, diameter, numNodes, axonalLength=2.5e-4*cm):
+    def __init__(self, x, y, diameter, numNodes, axonalLength):
         self.x = x
         self.y = y
         self.diameter = diameter
@@ -261,7 +261,7 @@ def placeFiberInNerve(nerve, maxAttempts = 1000):
                         amountToShrink = (fiber.diameter/2.0 + diameter/2.0) - distBetweenFibers
                         diameter -= amountToShrink * 2
 
-        return NerveFiber(x, y, diameter, nerve["numNodes"])
+        return NerveFiber(x, y, diameter, nerve["numNodes"], nerve["axonalLength"])
 
     fiber = placeFiber(maxAttempts)
     # make sure fiber isn't too big or small
@@ -347,9 +347,8 @@ def plotCompoundPotential():
 
 ##############
 # Start Script
-# Distances and lengths are in CENTIMETRES
-# Everythin else is in 'milli' units (mA, mF, etc.)
 ##############
+
 log.logLevel = log.ERROR
 # log.logLevel = log.INFO
 
@@ -371,7 +370,8 @@ nerve = {
     "y"            : 0.0  *cm, # cm
     "z"            : 0.0  *cm, # cm
     "minFiberDiam" : 0.01 *cm, # cm
-    "maxFiberDiam" : 0.05 *cm  # cm
+    "maxFiberDiam" : 0.05 *cm, # cm
+    "axonalLength" : 2.5e-4*cm # cm
 }
 
 # Create and place the axons
