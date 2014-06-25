@@ -283,15 +283,13 @@ def placeFiberInNerve(nerve, maxAttempts = 1000):
 # Some Plotting Functions
 ##########################
 
-def plotNodePositions():
-    z = []
-    y = []
-
-    pylab.scatter(z, y, color='r', marker='o')
+def plotNodePositions(plotIndices=True):
+    pylab.figure()
+    pylab.title("Node Positions")
     pylab.ylabel('y (cm)')
     pylab.xlabel('z (cm)')
     xSpan = mag(nerve["fibers"][0].internodalLength*nerve["numNodes"], cm)
-    ySpan = mag(nerve["fibers"][0].axonNodes[0].diameter, cm) + abs(mag(nerve["fibers"][0].y, cm))
+    ySpan = mag(nerve["fibers"][0].diameter, cm) + abs(mag(nerve["fibers"][0].y, cm))
     pylab.xlim([-xSpan, xSpan])
     pylab.ylim([-ySpan, ySpan])
 
@@ -299,10 +297,11 @@ def plotNodePositions():
         for j, node in enumerate(fiber.axonNodes):
             newZ = mag(node.z, cm)
             newY = mag(fiber.y, cm)
-            z.append(newZ)
-            y.append(newY)
+
             rectangle = pylab.Rectangle((newZ,newY), mag(node.length, cm), mag(node.diameter, cm), alpha=0.5)
             pylab.gca().add_artist(rectangle)
+            if plotIndices:
+                pylab.text(newZ, newY + mag(node.diameter, cm), str(node.index))
 
     pylab.show()
 
@@ -409,7 +408,6 @@ for i in range(0, nerve["numFibers"]):
         break
 print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
-plotCrossSectionPositions(False)
 plotNodePositions()
 exit()
 
