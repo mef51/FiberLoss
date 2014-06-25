@@ -249,7 +249,7 @@ def placeFiberInNerve(nerve, maxAttempts = 1000):
                     if distBetweenFibers < fiber.diameter/2.0 or distBetweenFibers < diameter/2.0:
                         # fiber's center is inside another fiber. push it out
                         # this is vector stuff
-                        direction = [x - fiber.x, y - fiber.y]
+                        direction = [mag(x - fiber.x, cm), mag(y - fiber.y, cm)]
                         dirMag = np.sqrt(direction[0]**2 + direction[1]**2)
                         # normalize this vector so that we can use it as a direction
                         direction[0] = direction[0] /dirMag
@@ -291,7 +291,7 @@ def plotNodePositions():
     pylab.ylabel('y (cm)')
     pylab.xlabel('z (cm)')
     xSpan = mag(nerve["fibers"][0].internodalLength*nerve["numNodes"], cm)
-    ySpan = mag(nerve["fibers"][0].diameter, cm) + abs(mag(nerve["fibers"][0].y, cm))
+    ySpan = mag(nerve["fibers"][0].axonNodes[0].diameter, cm) + abs(mag(nerve["fibers"][0].y, cm))
     pylab.xlim([-xSpan, xSpan])
     pylab.ylim([-ySpan, ySpan])
 
@@ -389,7 +389,7 @@ stimulusCurrent = {
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
-    "numFibers"    : 2,
+    "numFibers"    : 1,
     "numNodes"     : 10,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2  *cm, # cm
