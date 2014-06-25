@@ -240,7 +240,7 @@ def placeFiberInNerve(nerve, maxAttempts = 1000):
 
             recheck = False
             for k, fiber in enumerate(nerve["fibers"]):
-                distBetweenFibers = getDistance(x, y, 0, fiber.x, fiber.y, 0)
+                distBetweenFibers = getDistance(x, y, 0*cm, fiber.x, fiber.y, 0*cm)
                 if distBetweenFibers < (fiber.diameter/2.0 + diameter/2.0):
                     if distBetweenFibers < fiber.diameter/2.0 or distBetweenFibers < diameter/2.0:
                         # fiber's center is inside another fiber. push it out
@@ -385,7 +385,7 @@ stimulusCurrent = {
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
-    "numFibers"    : 1,
+    "numFibers"    : 2,
     "numNodes"     : 10,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2  *cm, # cm
