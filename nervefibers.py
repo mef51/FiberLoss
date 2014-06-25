@@ -22,6 +22,10 @@ uF = Unum.unit('uF', 10**-6 * F) # microFarads
 mS = Unum.unit('mS', 10**-3 * S) # milliSiemens
 mohm = Unum.unit('mohm', 10**-3 * ohm) # milliohms
 
+# strips the unit from a number and returns just the number. `unit` is a Unum unit.
+def mag(v, unit):
+    return float(v/unit)
+
 class AxonPositionNode:
     """
     A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952 .
@@ -106,7 +110,7 @@ class AxonPositionNode:
 
         # MCNEALLLLLL (1976)
         def extV(stimulus, distance): # the external potential
-            if float(distance/cm) == 0:
+            if mag(distance, cm) == 0:
                 return 0.0*mV
             else:
                 v = (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
@@ -173,7 +177,7 @@ class NerveBundleSimulation:
     def __init__(self, T=55*ms, dt=0.025*ms):
         self.T = T
         self.dt = dt
-        self.timeLine = np.arange(0, float((T+dt)/ms), float(dt/ms))
+        self.timeLine = np.arange(0, mag((T+dt), ms), mag(dt, ms))
 
     def simulate(self, nerve, stimulusCurrent):
         for t in range(1, len(self.timeLine)):
@@ -214,7 +218,7 @@ def getDistance(x1, y1, z1, x2, y2, z2):
     x = abs(x1 - x2)
     y = abs(y1 - y2)
     z = abs(z1 - z2)
-    return np.sqrt(float((x**2 + y**2 + z**2)/(cm*cm))) * (cm)
+    return np.sqrt(mag((x**2 + y**2 + z**2), (cm*cm))) * (cm)
 
 # Places a nerve fiber and makes sure it doesn't overlap with any other nerve fibers in the nerve bundle
 # returns true if it succeeds, false otherwise
@@ -286,18 +290,18 @@ def plotNodePositions():
     pylab.scatter(z, y, color='r', marker='o')
     pylab.ylabel('y (cm)')
     pylab.xlabel('z (cm)')
-    xSpan = float(nerve["fibers"][0].internodalLength*nerve["numNodes"]/cm)
-    ySpan = float(nerve["fibers"][0].diameter/cm) + abs(float(nerve["fibers"][0].y/cm))
+    xSpan = mag(nerve["fibers"][0].internodalLength*nerve["numNodes"], cm)
+    ySpan = mag(nerve["fibers"][0].diameter, cm) + abs(mag(nerve["fibers"][0].y, cm))
     pylab.xlim([-xSpan, xSpan])
     pylab.ylim([-ySpan, ySpan])
 
     for i, fiber in enumerate(nerve["fibers"]):
         for j, node in enumerate(fiber.axonNodes):
-            newZ = float(node.z/cm)
-            newY = float(fiber.y/cm)
+            newZ = mag(node.z, cm)
+            newY = mag(fiber.y, cm)
             z.append(newZ)
             y.append(newY)
-            rectangle = pylab.Rectangle((newZ,newY), float(node.length/cm), float(node.diameter/cm), alpha=0.5)
+            rectangle = pylab.Rectangle((newZ,newY), mag(node.length, cm), mag(node.diameter, cm), alpha=0.5)
             pylab.gca().add_artist(rectangle)
 
     pylab.show()
@@ -306,25 +310,25 @@ def plotCrossSectionPositions(plotStimulusPos=True):
     x = []
     y = []
     for i in range(0, len(nerve["fibers"])):
-        x.append(float(nerve["fibers"][i].x/cm))
-        y.append(float(nerve["fibers"][i].y/cm))
+        x.append(mag(nerve["fibers"][i].x, cm))
+        y.append(mag(nerve["fibers"][i].y, cm))
 
     if plotStimulusPos:
-        x.append(float(stimulusCurrent["x"]/cm))
-        y.append(float(stimulusCurrent["y"]/cm))
+        x.append(mag(stimulusCurrent["x"], cm))
+        y.append(mag(stimulusCurrent["y"], cm))
 
     pylab.scatter(x, y, color='r', marker='o', s=0)
     pylab.ylabel('y (cm)')
     pylab.xlabel('x (cm)')
     pylab.axis('equal')
     for i in range(0, len(nerve["fibers"])):
-        circle = pylab.Circle((x[i],y[i]), float(nerve["fibers"][i].diameter/(2.0*cm)), alpha=0.5)
+        circle = pylab.Circle((x[i],y[i]), mag(nerve["fibers"][i].diameter/(2.0), cm), alpha=0.5)
         pylab.gca().add_artist(circle)
 
     if plotStimulusPos:
-        pylab.axhline(y = float(stimulusCurrent["y"]/cm), color='k', linestyle='--')
-        pylab.text(float(stimulusCurrent["x"]/cm)-4, float(stimulusCurrent["y"]/cm)-0.5, "inside")
-        pylab.text(float(stimulusCurrent["x"]/cm)-4, float(stimulusCurrent["y"]/cm)+0.2, "outside")
+        pylab.axhline(y = mag(stimulusCurrent["y"], cm), color='k', linestyle='--')
+        pylab.text(mag(stimulusCurrent["x"], cm)-4, mag(stimulusCurrent["y"], cm)-0.5, "inside")
+        pylab.text(mag(stimulusCurrent["x"], cm)-4, mag(stimulusCurrent["y"], cm)+0.2, "outside")
     pylab.show()
 
 # plots the membrane potential of the axons closest to the stimulus
@@ -339,8 +343,8 @@ def plotClosestAxons():
         pylab.figure()
 
         # strip out units
-        Vm = [float(v/mV) for v in node.Vm]
-        curr = [float(c/mA) for c in curr]
+        Vm = [mag(v, mV) for v in node.Vm]
+        curr = [mag(c, mA) for c in curr]
 
         # plot
         pylab.plot(simulation.timeLine, Vm, simulation.timeLine, curr)
@@ -405,6 +409,7 @@ for i in range(0, nerve["numFibers"]):
         break
 print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
+plotCrossSectionPositions(False)
 plotNodePositions()
 exit()
 
