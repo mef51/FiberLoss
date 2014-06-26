@@ -400,10 +400,10 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 12 *mA,    # mA. the current applied at the surface
-    "x"         : 0  *cm,    # cm
-    "y"         : 10 *cm,    # cm
-    "z"         : 0  *cm     # cm
+    "magnitude" : 0.1 *mA,    # mA. the current applied at the surface
+    "x"         : 0   *cm,    # cm
+    "y"         : 0.1 *cm,    # cm
+    "z"         : 0   *cm     # cm
 }
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
@@ -411,13 +411,13 @@ nerve = {
     "numFibers"    : 1,
     "numNodes"     : 11,    # the number of axon nodes each fiber has
     "fibers"       : [],
-    "radius"       : 0.2  *cm, # cm
-    "x"            : 0.0  *cm, # cm
-    "y"            : 0.0  *cm, # cm
-    "z"            : 0.0  *cm, # cm
-    "minFiberDiam" : 0.01 *cm, # cm
-    "maxFiberDiam" : 0.05 *cm, # cm
-    "axonalLength" : 2.5e-4*cm # cm
+    "radius"       : 0.2    *cm, # cm
+    "x"            : 0.0    *cm, # cm
+    "y"            : 0.0    *cm, # cm
+    "z"            : 0.0    *cm, # cm
+    "minFiberDiam" : 0.0015 *cm, # cm
+    "maxFiberDiam" : 0.0025 *cm, # cm
+    "axonalLength" : 2.5e-4 *cm # cm
 }
 
 # Create and place the axons
