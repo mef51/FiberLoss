@@ -389,7 +389,7 @@ def plotCompoundPotential():
     pylab.ylabel('Voltage (mV)')
     pylab.title('Sum of all Action Potentials')
     pylab.savefig("sumOfPotentials.jpg")
-    pylab.close();
+    pylab.close()
 
 ##############
 # Start Script
