@@ -162,7 +162,9 @@ class NerveFiber:
         axonalDiameter = self.axonalDiameter = 0.7 * diameter
         axonNodes = self.axonNodes = []
         for i in range(0, numNodes):
-            axonNode = AxonPositionNode(i*(axonalLength+internodalLength), axonalDiameter, axonalLength, i, internodalLength)
+            index = i - numNodes/2
+            z = index*(axonalLength+internodalLength)
+            axonNode = AxonPositionNode(z, axonalDiameter, axonalLength, index, internodalLength)
 
             nodePos = (self.x, self.y, axonNode.z)  # (x, y, z)
             currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
@@ -205,6 +207,9 @@ class NerveBundleSimulation:
                     # print "Stepping axon #" + str(k) + " in fiber #" + str(i)
                     log.info("========")
                     log.infoVar(t*dt, 'time')
+                    log.infoVar(axonNode.index, 'node')
+                    log.infoVar(leftNode["V"], "leftVoltage")
+                    log.infoVar(rightNode["V"], "rightVoltage")
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
 
 # represents a square wave current strimulus
@@ -376,7 +381,7 @@ def plotCompoundPotential():
 ##############
 
 log.logLevel = log.ERROR
-# log.logLevel = log.INFO
+log.logLevel = log.INFO
 
 # Current Stimulus
 stimulusCurrent = {
@@ -389,7 +394,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 10,    # the number of axon nodes each fiber has
+    "numNodes"     : 11,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2  *cm, # cm
     "x"            : 0.0  *cm, # cm
@@ -409,7 +414,6 @@ for i in range(0, nerve["numFibers"]):
 print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
 plotNodePositions()
-exit()
 
 T    = 55*ms    # ms
 dt   = 0.025*ms # ms
