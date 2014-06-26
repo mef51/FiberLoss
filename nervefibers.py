@@ -335,7 +335,7 @@ def plotCrossSectionPositions(plotStimulusPos=True):
         pylab.text(mag(stimulusCurrent["x"], cm)-4, mag(stimulusCurrent["y"], cm)+0.2, "outside")
     pylab.show()
 
-def plotMembranePotential(current, node, fiberNum):
+def plotMembranePotential(current, node, fiberNum, showFigure=False):
     pylab.figure()
 
     # strip out units
@@ -348,6 +348,8 @@ def plotMembranePotential(current, node, fiberNum):
     pylab.ylabel('Membrane Potential (mV)')
     pylab.xlabel('Time (msec)')
     pylab.savefig("graphs/axons/axon" + str(node.index) + "fiber" + str(fiberNum) + ".jpg")
+    if showFigure:
+        pylab.show()
     pylab.close()
 
 # plots the membrane potential of the axons closest to the stimulus
