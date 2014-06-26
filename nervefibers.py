@@ -335,28 +335,41 @@ def plotCrossSectionPositions(plotStimulusPos=True):
         pylab.text(mag(stimulusCurrent["x"], cm)-4, mag(stimulusCurrent["y"], cm)+0.2, "outside")
     pylab.show()
 
+def plotMembranePotential(current, node, fiberNum):
+    pylab.figure()
+
+    # strip out units
+    Vm = [mag(v, mV) for v in node.Vm]
+    curr = [mag(c, mA) for c in current]
+
+    # plot
+    pylab.plot(simulation.timeLine, Vm, simulation.timeLine, curr)
+    pylab.title('Axon #' + str(node.index) + ": Distance = " + str(node.distance) + " cm")
+    pylab.ylabel('Membrane Potential (mV)')
+    pylab.xlabel('Time (msec)')
+    pylab.savefig("graphs/axons/axon" + str(node.index) + "fiber" + str(fiberNum) + ".jpg")
+    pylab.close()
+
 # plots the membrane potential of the axons closest to the stimulus
 def plotClosestAxons():
+    curr = []
+    for j in range(0, len(simulation.timeLine)):
+        curr.append(getCurrent(j*dt, stimulusCurrent["magnitude"]))
+
     for i in range(0, len(nerve["fibers"])):
-        curr = []
         node = nerve["fibers"][i].axonNodes[0]
-        for j in range(0, len(simulation.timeLine)):
-            curr.append(getCurrent(j*dt, stimulusCurrent["magnitude"]))
+        print "plotting axon #" + str(node.index) + " in fiber #" + str(i) + "..."
+        plotMembranePotential(curr, node, i)
 
-        print "plotting axon #" + str(i) + "..."
-        pylab.figure()
+def plotMembranePotentialOfNodes(nerve):
+    curr = []
+    for j in range(0, len(simulation.timeLine)):
+        curr.append(getCurrent(j*dt, stimulusCurrent["magnitude"]))
 
-        # strip out units
-        Vm = [mag(v, mV) for v in node.Vm]
-        curr = [mag(c, mA) for c in curr]
-
-        # plot
-        pylab.plot(simulation.timeLine, Vm, simulation.timeLine, curr)
-        pylab.title('Axon #' + str(i) + ": Distance = " + str(node.distance) + " cm")
-        pylab.ylabel('Membrane Potential (mV)')
-        pylab.xlabel('Time (msec)')
-        pylab.savefig("graphs/axons/axon" + str(i) + ".jpg")
-        pylab.close()
+    for i, fiber in enumerate(nerve["fibers"]):
+        for k, node in enumerate(fiber.axonNodes):
+            print "plotting axon #" + str(node.index) + " in fiber #" + str(i) + "..."
+            plotMembranePotential(curr, node, i)
 
 def plotCompoundPotential():
     compoundPotential = []
@@ -381,7 +394,7 @@ def plotCompoundPotential():
 ##############
 
 log.logLevel = log.ERROR
-log.logLevel = log.INFO
+# log.logLevel = log.INFO
 
 # Current Stimulus
 stimulusCurrent = {
@@ -413,14 +426,14 @@ for i in range(0, nerve["numFibers"]):
         break
 print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
-plotNodePositions()
+# plotNodePositions()
 
 T    = 55*ms    # ms
 dt   = 0.025*ms # ms
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
-plotClosestAxons()
+plotMembranePotentialOfNodes(nerve)
 
 print "Max Voltage for axon 0: " + str(max(nerve["fibers"][0].axonNodes[0].Vm))
 print "Last Voltage for axon 0: " + str(nerve["fibers"][0].axonNodes[0].Vm[-1])
