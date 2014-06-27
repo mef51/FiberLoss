@@ -10,10 +10,13 @@ This simulation is inspired by a mathematical model that gives some clues as to 
 
 The goal of the simulation is to recreate results from the experiment described above using the mathematical model.
 
-Status: Not Finished
+Status: Simulates without errors, but does not generate expected action potentials.
 ====================
 
-* Simulates a single cluster of axon nodes being stimulated by a nearby current
+* Creates a bundle of fibers, where each fiber is a group of connected nodes.
+* Places a stimulus some distance away from the bundle.
+* Can simulate the response of each node to the axon. Axons affect each other, and can potentially trigger propagating action potentials. The results are not the expected results.
+* Can plot various things about the system, including positions, membrane voltages, and forward and backward rates.
 
 Papers
 ======
