@@ -43,13 +43,13 @@ class AxonPositionNode:
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
             "restingVoltage"     : -65.5    *mV,         # V_rest (mv)
-            "cm"                 : 0.001   *mF/(cm**2), # mF/cm² membrane capacitance per unit area
+            "cm"                 : 0.002   *mF/(cm**2), # mF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
-            "sodiumPotential"    : 115.5   *mV,         # mV
-            "potassiumPotential" : -11.5   *mV,         # mv
-            "leakagePotential"   : 11.1    *mV,         # mV
+            "sodiumPotential"    : 50.5   *mV,         # mV
+            "potassiumPotential" : -77.0   *mV,         # mv
+            "leakagePotential"   : -54.4    *mV,         # mV
             "externalResistivity": 300.0e3 *mohm*cm,    # mΩ•cm
             "internalResistivity": 110.0e3 *mohm*cm     # mΩ•cm also called axoplasm resistivity
         }
@@ -102,6 +102,11 @@ class AxonPositionNode:
         betaH = self.betaH = np.vectorize(betaH)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
+        log.infoVar(diameter, 'diameter')
+        log.infoVar(length, 'length')
+        log.infoVar(np.pi, 'pi')
+        log.infoVar(params["cm"], 'cm')
+
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
         # params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
         params["Ga"] = 0.0
@@ -120,7 +125,10 @@ class AxonPositionNode:
         potassiumConductance = self.params["gBarK"]  * (self.n**4)
         leakageConductance   = self.params["gBarL"]
 
-        # integrate the equations on m, h, and n
+        log.infoVar(sodiumConductance, 'sodiumConductance')
+        log.infoVar(potassiumConductance, 'potassiumConductance')
+        log.infoVar(leakageConductance, 'leakageConductance')
+
         log.infoVar(self.m, "self.m")
         log.infoVar(self.h, "self.h")
         log.infoVar(self.n, "self.n")
@@ -133,6 +141,7 @@ class AxonPositionNode:
         for gate in [self.m, self.h, self.n]:
             checkGates(gate)
 
+        # integrate the equations on m, h, and n
         self.m += (self.alphaM(self.Vm[lastVm]) * (1 - self.m) - self.betaM(self.Vm[lastVm])*self.m) * dt
         self.h += (self.alphaH(self.Vm[lastVm]) * (1 - self.h) - self.betaH(self.Vm[lastVm])*self.h) * dt
         self.n += (self.alphaN(self.Vm[lastVm]) * (1 - self.n) - self.betaN(self.Vm[lastVm])*self.n) * dt
@@ -162,9 +171,11 @@ class AxonPositionNode:
         log.infoVar(sodiumCurrent, "sodiumCurrent")
         log.infoVar(potassiumCurrent, "potassiumCurrent")
         log.infoVar(leakageCurrent, "leakageCurrent")
+        log.infoVar(self.Vm[lastVm], "lastVm")
 
         newV = (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent) + self.Vm[lastVm]
 
+        log.infoVar(self.params["Cm"], "Cm")
         log.infoVar(surroundingCurrent, "surroundingCurrent")
         log.infoVar(ionicCurrent, "ionicCurrent")
         log.infoVar(newV, "newV")
@@ -247,7 +258,7 @@ class NerveBundleSimulation:
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
 
 # represents a square wave current strimulus
-def getCurrent(t, current, tPulseStart=5*ms, pulseWidth=25*ms):
+def getCurrent(t, current, tPulseStart=0*ms, pulseWidth=25*ms):
     if tPulseStart <= t <= (tPulseStart + pulseWidth):
         return current
     else:
@@ -430,11 +441,11 @@ def plotCompoundPotential():
 ##############
 
 log.logLevel = log.ERROR
-# log.logLevel = log.INFO
+log.logLevel = log.INFO
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 0.3 *mA,    # mA. the current applied at the surface
+    "magnitude" : 0.000003 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.1 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -449,8 +460,8 @@ nerve = {
     "x"            : 0.0    *cm, # cm
     "y"            : 0.0    *cm, # cm
     "z"            : 0.0    *cm, # cm
-    "minFiberDiam" : 0.0015 *cm, # cm
-    "maxFiberDiam" : 0.0025 *cm, # cm
+    "minFiberDiam" : 0.0019 *cm, # cm
+    "maxFiberDiam" : 0.0021 *cm, # cm
     "axonalLength" : 2.5e-4 *cm # cm
 }
 
