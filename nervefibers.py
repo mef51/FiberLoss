@@ -43,7 +43,7 @@ class AxonPositionNode:
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
             "restingVoltage"     : -65.5    *mV,         # V_rest (mv)
-            "cm"                 : 0.001   *mF/(cm**2), # mF/cm² membrane capacitance per unit area (should really be 1.0e-3)
+            "cm"                 : 0.001   *mF/(cm**2), # mF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
@@ -54,19 +54,50 @@ class AxonPositionNode:
             "internalResistivity": 110.0e3 *mohm*cm     # mΩ•cm also called axoplasm resistivity
         }
 
-        # Potassium (K) Channel
-        alphaN = self.alphaN = np.vectorize(lambda v: (0.01*(1/(ms*mV)) * (v+55*mV)) / ( 1 - np.exp(float(-(v+55*mV)/(10.0*mV)))))
-        betaN = self.betaN  = np.vectorize( lambda v: 0.125*(1/ms) * np.exp(float(-(v+65*mV)/(80.0*mV)) ))
+        ###### Potassium (K) Channel
+        def alphaN(v):
+            a = -(v + 55*mV)/(10.0*mV)
+            a = 1.0/(1 - np.exp(float(a)))
+            a *= v + 55*mV
+            a *= 0.01*(1/(ms*mV))
+            return a
+        self.alphaN = alphaN = np.vectorize(alphaN)
+
+        def betaN(v):
+            b = -(v+55*mV)/(10.0*mV)
+            b = 0.125 * (1/ms) * np.exp(float(b))
+            return b
+        self.betaN = betaN = np.vectorize(betaN)
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
-        # Sodium (Na) Channel (activating)
-        alphaM = self.alphaM = np.vectorize( lambda v: (0.1*(1/(ms*mV)) * (v+40.0*mV)) / (1 - np.exp(float(-(v+40*mV)/(10.0*mV)))))
-        betaM = self.betaM = np.vectorize( lambda v: 4*(1/ms) * np.exp( float(-(v+65*mV)/(18.0*mV)) ))
+        ###### Sodium (Na) Channel (activating)
+        def alphaM(v):
+            a = -(v + 40*mV)/(10.0*mV)
+            a = 1.0/(1 - np.exp(float(a)))
+            a *= v + 40*mV
+            a *= 0.1*(1/(ms*mV))
+            return a
+        self.alphaM = alphaM = np.vectorize(alphaM)
+
+        def betaM(v):
+            b = -(v + 65*mV)/(18.0*mV)
+            b = 4 * (1/ms) * np.exp(float(b))
+            return b
+        self.betaM = betaM = np.vectorize(betaM)
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 
-        # Sodium (Na) Channel (inactivating)
-        alphaH = self.alphaH = np.vectorize( lambda v: 0.07*(1/ms) * np.exp( float(-(v+65*mV)/(20.0*mV)) ))
-        betaH = self.betaH = np.vectorize( lambda v: 1.0*(1/ms)/( 1 + np.exp(float(-(v+35*mV)/(10.0*mV)))))
+        ###### Sodium (Na) Channel (inactivating)
+        def alphaH(v):
+            a = -(v + 65*mV)/(20*mV)
+            a = 0.07 * (1/ms) * np.exp(float(a))
+            return a
+        self.alphaH = alphaH = np.vectorize(alphaH)
+
+        def betaH(v):
+            b = -(v + 35*mV)/(10.0*mV)
+            b = 1.0 * (1/ms) / (1 + np.exp(float(b)))
+            return b
+        betaH = self.betaH = np.vectorize(betaH)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
