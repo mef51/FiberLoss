@@ -42,7 +42,7 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : 0.0     *mV,         # V_rest (mv)
+            "restingVoltage"     : -65.5    *mV,         # V_rest (mv)
             "cm"                 : 0.001   *mF/(cm**2), # mF/cm² membrane capacitance per unit area (should really be 1.0e-3)
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
@@ -70,7 +70,8 @@ class AxonPositionNode:
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
-        params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
+        # params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
+        params["Ga"] = 0.0
 
         self.Vm = [params["restingVoltage"]] # The axon node's membrane potential
         self.m  = mInf(params["restingVoltage"])
@@ -119,7 +120,8 @@ class AxonPositionNode:
         neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * self.Vm[lastVm]) # V_n-1 + V_n+1 - 2Vn
         neighbourExtPotential = extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
 
-        surroundingCurrent = self.params["Ga"] * (neighbourPotential + neighbourExtPotential)
+        # surroundingCurrent = self.params["Ga"] * (neighbourPotential + neighbourExtPotential)
+        surroundingCurrent = I
         ionicCurrent = np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
 
         log.infoVar(neighbourPotential, "neighbourPotential")
@@ -128,8 +130,7 @@ class AxonPositionNode:
         log.infoVar(potassiumCurrent, "potassiumCurrent")
         log.infoVar(leakageCurrent, "leakageCurrent")
 
-        newV = self.Vm[lastVm]
-        newV += (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent)
+        newV = (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent) + self.Vm[lastVm]
 
         log.infoVar(surroundingCurrent, "surroundingCurrent")
         log.infoVar(ionicCurrent, "ionicCurrent")
@@ -409,7 +410,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 11,    # the number of axon nodes each fiber has
+    "numNodes"     : 1,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
