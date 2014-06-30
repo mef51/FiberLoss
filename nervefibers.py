@@ -56,6 +56,7 @@ class AxonPositionNode:
 
         ###### Potassium (K) Channel
         def alphaN(v):
+            if v == -55*mV: return (0.1*(1/ms))
             a = -(v + 55*mV)/(10.0*mV)
             a = 1.0/(1 - np.exp(float(a)))
             a *= v + 55*mV
@@ -72,6 +73,7 @@ class AxonPositionNode:
 
         ###### Sodium (Na) Channel (activating)
         def alphaM(v):
+            if v == -40*mV: return 1.0 * (1/ms)
             a = -(v + 40*mV)/(10.0*mV)
             a = 1.0/(1 - np.exp(float(a)))
             a *= v + 40*mV
