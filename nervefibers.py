@@ -42,8 +42,8 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : -8.6746 *mV,         # V_rest (mv)
-            "cm"                 : 1.0     *mF/(cm**2), # mF/cm² membrane capacitance per unit area (should really be 1.0e-3)
+            "restingVoltage"     : 0.0     *mV,         # V_rest (mv)
+            "cm"                 : 0.001   *mF/(cm**2), # mF/cm² membrane capacitance per unit area (should really be 1.0e-3)
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
@@ -114,12 +114,12 @@ class AxonPositionNode:
                 return 0.0*mV
             else:
                 v = (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
-                return (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
+                return v
 
         neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * self.Vm[lastVm]) # V_n-1 + V_n+1 - 2Vn
         neighbourExtPotential = extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
 
-        surroundingCurrent = (self.params["Ga"] * (neighbourPotential + neighbourExtPotential))
+        surroundingCurrent = self.params["Ga"] * (neighbourPotential + neighbourExtPotential)
         ionicCurrent = np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
 
         log.infoVar(neighbourPotential, "neighbourPotential")
@@ -192,8 +192,8 @@ class NerveBundleSimulation:
                     effectiveCurrent = getCurrent(t*self.dt, stimulusCurrent["magnitude"])
 
                     lastStep = len(axonNode.Vm) - 1
-                    leftNode = {"V": 0*mV, "d": 0*cm}
-                    rightNode = {"V": 0*mV, "d": 0*cm}
+                    leftNode  = {"V": 0.0*mV, "d": 0.0*cm}
+                    rightNode = {"V": 0.0*mV, "d": 0.0*cm}
 
                     if (k-1) > -1:
                         leftNode["V"] = fiber.axonNodes[k-1].Vm[lastStep]
@@ -400,7 +400,7 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 0.1 *mA,    # mA. the current applied at the surface
+    "magnitude" : 0.3 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.1 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -437,6 +437,4 @@ print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
 plotMembranePotentialOfNodes(nerve)
 
-print "Max Voltage for axon 0: " + str(max(nerve["fibers"][0].axonNodes[0].Vm))
-print "Last Voltage for axon 0: " + str(nerve["fibers"][0].axonNodes[0].Vm[-1])
 print "Done."
