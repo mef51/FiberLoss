@@ -10,12 +10,12 @@ import pylab
 
 voltShift = -65.5 # mV
 Constants = {
-    "gBarNa": 120.0, # mS/cm^2
-    "gBarK" : 36.0, # mS/cm^2
-    "gBarL" : 0.25, # mS/cm^2
-    "E_Na"  : 50 - voltShift, # mV
-    "E_K"   : -77 - voltShift, # mV
-    "E_L"   : -54.4 - voltShift  # mV
+    "Vr"    : -70,     # mV
+    "F"     : 965141.0,# C/g/mole
+    "R"     : 8.3144,  # J/K/mole
+    "T"     : 295.18,  # K
+    "gBarL" : 30.3, # mS/cm^2
+    "E_L"   : 0.026 # mV
 }
 
 def alphaN(v):
@@ -63,12 +63,20 @@ def betaH(v):
 betaH = np.vectorize(betaH)
 
 def sodiumCurrent(m, h, v):
-    # EFRT = (E*F) / (R*T)
-    # return pBarNa * h * m**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
-    return m**3 * h * Constants["gBarNa"] * (v - Constants["E_Na"])
+    E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
+    NaO = 114.5 # mM
+    NaI = 13.7  # mM
+    pBarNa = 8e-3 # cm/s
+    EFRT = (E*F) / (R*T)
+    return pBarNa * h * m**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
 
 def potassiumCurrent(n, v):
-    return n**4 * Constants["gBarK"] * (v - Constants["E_K"])
+    E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
+    Ko = 2.5 # mM
+    Ki = 120 # mM
+    pBarK = 1.2e-3 # cm/s
+    EFRT = (E*F) / (R*T)
+    return pBarK * n**2 * EFRT * F * (Ko - Ki*exp(EFRT)) / (1 - exp(EFRT))
 
 def leakageCurrent(v):
     return Constants["gBarL"] * (v - Constants["E_L"])
