@@ -8,14 +8,15 @@ from math import exp, pi
 import numpy as np
 import pylab
 
-voltShift = -65.5 # mV
 Constants = {
     "Vr"    : -70,     # mV
     "F"     : 965141.0,# C/g/mole
     "R"     : 8.3144,  # J/K/mole
     "T"     : 295.18,  # K
     "gBarL" : 30.3, # mS/cm^2
-    "E_L"   : 0.026 # mV
+    "E_L"   : 0.026, # mV
+    "NaO"   : 114.5, # mM
+    "NaI"   : 13.7  # mM
 }
 
 def alphaN(v):
@@ -62,10 +63,36 @@ def betaH(v):
     return b
 betaH = np.vectorize(betaH)
 
+###### Non-specific Delayed Current Density (sodium!)
+def alphaP(v):
+    if v == 40: return 0.06
+    a = (1 - exp((40 - v)/10)) ** -1
+    a *= 0.006 * (v-40)
+    return a
+alphaP = np.vectorize(alphaP)
+
+def betaP(v):
+    if v == -25: return 1.8
+    b = (1 - exp((v + 25)/20)) ** -1
+    b *= 0.09 * (-25 - v)
+    return b
+betaP = np.vectorize(betaP)
+
+def plotAlphaBetaFunctions():
+    v = np.arange(-75, 125) # millivolts
+    pylab.figure()
+    pylab.xlim([-75, 125])
+    pylab.plot(v, alphaM(v), v, alphaH(v), v, alphaN(v), v, alphaP(v), '--', v, betaM(v), v, betaH(v), v, betaN(v), v, betaP(v), '--')
+    pylab.legend(('alphaM', 'alphaH', 'alphaN', 'alphaP', 'betaM', 'betaH', 'betaN', 'betaP'))
+    pylab.title('Forward and Backward Rates')
+    pylab.ylabel(u'Rate Constant (ms^-1)')
+    pylab.xlabel('Voltage (mV)')
+    pylab.show()
+
 def sodiumCurrent(m, h, v):
     E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
-    NaO = 114.5 # mM
-    NaI = 13.7  # mM
+    NaO = Constants["NaO"]  # mM
+    NaI = Constants["NaI"]  # mM
     pBarNa = 8e-3 # cm/s
     EFRT = (E*F) / (R*T)
     return pBarNa * h * m**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
@@ -81,21 +108,18 @@ def potassiumCurrent(n, v):
 def leakageCurrent(v):
     return Constants["gBarL"] * (v - Constants["E_L"])
 
+def delayedCurrent(p, v):
+    E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
+    NaO = Constants["NaO"]  # mM
+    NaI = Constants["NaI"]  # mM
+    pBarP = 0.54e-3 # cm/s
+    EFRT = (E*F) / (R*T)
+    return pBarP * p**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
 
 nInf  = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 mInf  = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 hInf  = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
-
-def plotAlphaBetaFunctions():
-    v = np.arange(-75, 125) # millivolts
-    pylab.figure()
-    pylab.xlim([-75, 125])
-    pylab.plot(v, alphaM(v), v, alphaH(v), v, alphaN(v), v, betaM(v), v, betaH(v), v, betaN(v))
-    pylab.legend(('alphaM', 'alphaH', 'alphaN', 'betaM', 'betaH', 'betaN'))
-    pylab.title('Alpha and Beta Functions')
-    pylab.ylabel(u'Rate Constant (ms^-1)')
-    pylab.xlabel('Voltage (mV)')
-    pylab.show()
+pInf  = lambda v: alphaP(v)/(alphaP(v) + betaP(v))
 
 def last(list):
     return list[len(list) - 1]
@@ -107,10 +131,16 @@ cm = 0.0002 # mF/cm^2
 D = 0.002 # cm (20microns)
 d = 0.7 * D # cm
 l = 0.00025 # cm (2.5 microns)
+r = 0.1  # cm (1mm)
+I = 0.3  # mA
+RhoE = 300 # ohm*cm
+RhoI = 110 # ohm*cm
+L = 0.2 # cm
 
 m = [mInf(restingVoltage)]
 h = [hInf(restingVoltage)]
 n = [nInf(restingVoltage)]
+p = [pInf(restingVoltage)]
 
 Vm = [restingVoltage]
 
@@ -120,19 +150,25 @@ def printStatus(t, v):
 
 
 printStatus(0.0, last(Vm))
+Ga = (pi * d**2) / (4*RhoI * L)
 for i in range(0, int(T/dt)):
     iNa = sodiumCurrent(last(m), last(h), last(Vm))
     iK  = potassiumCurrent(last(n), last(Vm))
     iL  = leakageCurrent(last(Vm))
-    ionicCurrent = iNa + iK + iL
+    iP  = delayedCurrent(last(p), last(Vm))
+    ionicCurrent = iNa + iK + iL + iP
 
     mNew = (alphaM(last(Vm))*(1 - last(m)) - betaM(last(Vm)) * last(m)) * dt + last(m)
     hNew = (alphaH(last(Vm))*(1 - last(h)) - betaH(last(Vm)) * last(h)) * dt + last(h)
     nNew = (alphaN(last(Vm))*(1 - last(n)) - betaN(last(Vm)) * last(n)) * dt + last(n)
+    pNew = (alphaP(last(Vm))*(1 - last(p)) - betaP(last(Vm)) * last(p)) * dt + last(p)
     m.append(mNew)
     h.append(hNew)
     n.append(nNew)
+    p.append(pNew)
 
-    newV = dt / (cm*pi*d*l) * (0.3 - pi*d*l *(ionicCurrent)) + last(Vm)
+    Ve = RhoE * I / (4 * pi * r)
+
+    newV = dt / (cm*pi*d*l) * (-2*Ga*Ve - pi*d*l *(ionicCurrent)) + last(Vm)
     printStatus((i+1)*dt, newV)
     Vm.append(newV)
