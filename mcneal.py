@@ -125,7 +125,7 @@ def last(list):
     return list[len(list) - 1]
 
 restingVoltage = 0.0 # mV
-dt = 0.025 # ms
+dt = 0.0000025 # ms
 T  = 1.0 # ms
 cm = 0.0002 # mF/cm^2
 D = 0.002 # cm (20microns)
@@ -133,8 +133,8 @@ d = 0.7 * D # cm
 l = 0.00025 # cm (2.5 microns)
 r = 0.1  # cm (1mm)
 I = 0.3  # mA
-RhoE = 300 # ohm*cm
-RhoI = 110 # ohm*cm
+RhoE = 300e3 # mohm*cm
+RhoI = 110e3 # mohm*cm
 L = 0.2 # cm
 
 m = [mInf(restingVoltage)]
@@ -177,10 +177,10 @@ for i in range(0, int(T/dt)):
 
     Ve = RhoE * I / (4 * pi * r)
 
-    print iNa
-    print iK
-    print iL
-    print iP
     newV = dt / (cm) * (-2*Ga*(Ve + last(Vm)) - (ionicCurrent)) + last(Vm)
     printStatus((i+1)*dt, newV)
     Vm.append(newV)
+
+timeLine = [i*dt for i in range(0, int(T/dt))]
+pylab.plot(timeLine, Vm)
+pylab.show()
