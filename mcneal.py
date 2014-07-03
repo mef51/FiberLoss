@@ -90,7 +90,7 @@ def plotAlphaBetaFunctions():
     pylab.show()
 
 def sodiumCurrent(m, h, v):
-    E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
+    E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     NaO = Constants["NaO"]  # (mol/cm^3)
     NaI = Constants["NaI"]  # (mol/cm^3)
     pBarNa = 8e-3 # cm/s
@@ -98,7 +98,7 @@ def sodiumCurrent(m, h, v):
     return pBarNa * h * m**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
 
 def potassiumCurrent(n, v):
-    E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
+    E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     Ko = 2.5 / 1e6 # (mol/cm^3)
     Ki = 120 / 1e6 # (mol/cm^3)
     pBarK = 1.2e-3 # cm/s
@@ -109,7 +109,7 @@ def leakageCurrent(v):
     return Constants["gBarL"] * (v - Constants["E_L"])
 
 def delayedCurrent(p, v):
-    E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
+    E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     NaO = Constants["NaO"]  # (mol/cm^3)
     NaI = Constants["NaI"]  # (mol/cm^3)
     pBarP = 0.54e-3 # cm/s
