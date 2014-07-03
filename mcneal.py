@@ -10,7 +10,7 @@ import pylab
 
 Constants = {
     "Vr"    : -70,     # mV
-    "F"     : 965141.0,# C/g/mole
+    "F"     : 964853.0,# C/mole
     "R"     : 8.3144,  # J/K/mole
     "T"     : 295.18,  # K
     "gBarL" : 30.3, # mS/cm^2
@@ -169,6 +169,6 @@ for i in range(0, int(T/dt)):
 
     Ve = RhoE * I / (4 * pi * r)
 
-    newV = dt / (cm*pi*d*l) * (-2*Ga*Ve - pi*d*l *(ionicCurrent)) + last(Vm)
+    newV = dt / (cm*pi*d*l) * (-2*Ga*(Ve + last(Vm)) - pi*d*l *(ionicCurrent)) + last(Vm)
     printStatus((i+1)*dt, newV)
     Vm.append(newV)
