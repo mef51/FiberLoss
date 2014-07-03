@@ -89,7 +89,7 @@ def plotAlphaBetaFunctions():
     pylab.xlabel('Voltage (mV)')
     pylab.show()
 
-def sodiumCurrent(m, h, v):
+def iNa(m, h, v):
     E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     NaO = Constants["NaO"]  # (mol/cm^3)
     NaI = Constants["NaI"]  # (mol/cm^3)
@@ -97,7 +97,7 @@ def sodiumCurrent(m, h, v):
     EFRT = (E*F) / (R*T)
     return pBarNa * h * m**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
 
-def potassiumCurrent(n, v):
+def iK(n, v):
     E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     Ko = 2.5 / 1e6 # (mol/cm^3)
     Ki = 120 / 1e6 # (mol/cm^3)
@@ -105,16 +105,19 @@ def potassiumCurrent(n, v):
     EFRT = (E*F) / (R*T)
     return pBarK * n**2 * EFRT * F * (Ko - Ki*exp(EFRT)) / (1 - exp(EFRT))
 
-def leakageCurrent(v):
+def iL(v):
     return Constants["gBarL"] * (v - Constants["E_L"])
 
-def delayedCurrent(p, v):
+def iP(p, v):
     E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     NaO = Constants["NaO"]  # (mol/cm^3)
     NaI = Constants["NaI"]  # (mol/cm^3)
     pBarP = 0.54e-3 # cm/s
     EFRT = (E*F) / (R*T)
     return pBarP * p**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
+
+def iIonic(m, h, n, p, v):
+    return iNa(last(m), last(h), last(v)) + iK(last(n), last(v)) + iL(last(v)) + iP(last(p), last(v))
 
 nInf  = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 mInf  = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
@@ -136,13 +139,29 @@ I = 0.3  # mA
 RhoE = 300e3 # mohm*cm
 RhoI = 110e3 # mohm*cm
 L = 0.2 # cm
+Ga = 1 / (RhoI * L)
+Ve = RhoE * I / (4 * pi * r)
 
-m = [mInf(restingVoltage)]
-h = [hInf(restingVoltage)]
-n = [nInf(restingVoltage)]
-p = [pInf(restingVoltage)]
+m = mInf(restingVoltage)
+h = hInf(restingVoltage)
+n = nInf(restingVoltage)
+p = pInf(restingVoltage)
+Vm = restingVoltage
 
-Vm = [restingVoltage]
+initialValues = [Vm, m, h, n, p]
+
+def f(vals, t):
+    v, m, h, n, p = vals
+
+    funcs = [
+        (1 / (cm)) * (-2*Ga*(Ve + last(v)) - iIonic(m, h, n, p, v)),
+        alphaM(last(v))*(1 - last(m)) - betaM(last(v)) * last(m),
+        alphaH(last(v))*(1 - last(h)) - betaH(last(v)) * last(h),
+        alphaN(last(v))*(1 - last(n)) - betaN(last(v)) * last(n),
+        alphaP(last(v))*(1 - last(p)) - betaP(last(v)) * last(p)
+    ]
+
+    return funcs
 
 ###############
 def printStatus(t, v):
@@ -152,7 +171,6 @@ def printVar(v, name):
     print name + ": " + str(v)
 
 printStatus(0.0, last(Vm))
-Ga = 1 / (RhoI * L)
 for i in range(0, int(T/dt)):
     # printVar(m, 'm')
     # printVar(h, 'h')
@@ -160,11 +178,11 @@ for i in range(0, int(T/dt)):
     # printVar(p, 'p')
     # printVar(Vm, 'Vm')
 
-    iNa = sodiumCurrent(last(m), last(h), last(Vm))
-    iK  = potassiumCurrent(last(n), last(Vm))
-    iL  = leakageCurrent(last(Vm))
-    iP  = delayedCurrent(last(p), last(Vm))
-    ionicCurrent = iNa + iK + iL + iP
+    iNav = iNa(last(m), last(h), last(Vm))
+    iKv  = iK(last(n), last(Vm))
+    iLv  = iL(last(Vm))
+    iPv  = iP(last(p), last(Vm))
+    ionicCurrent = iNav + iKv + iLv + iPv
 
     mNew = (alphaM(last(Vm))*(1 - last(m)) - betaM(last(Vm)) * last(m)) * dt + last(m)
     hNew = (alphaH(last(Vm))*(1 - last(h)) - betaH(last(Vm)) * last(h)) * dt + last(h)
