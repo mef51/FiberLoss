@@ -15,8 +15,8 @@ Constants = {
     "T"     : 295.18,  # K
     "gBarL" : 30.3, # mS/cm^2
     "E_L"   : 0.026, # mV
-    "NaO"   : 114.5, # mM
-    "NaI"   : 13.7  # mM
+    "NaO"   : 114.5 / 1e6, # (mol/cm^3)
+    "NaI"   : 13.7 / 1e6  # (mol/cm^3)
 }
 
 def alphaN(v):
@@ -91,16 +91,16 @@ def plotAlphaBetaFunctions():
 
 def sodiumCurrent(m, h, v):
     E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
-    NaO = Constants["NaO"]  # mM
-    NaI = Constants["NaI"]  # mM
+    NaO = Constants["NaO"]  # (mol/cm^3)
+    NaI = Constants["NaI"]  # (mol/cm^3)
     pBarNa = 8e-3 # cm/s
     EFRT = (E*F) / (R*T)
     return pBarNa * h * m**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
 
 def potassiumCurrent(n, v):
     E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
-    Ko = 2.5 # mM
-    Ki = 120 # mM
+    Ko = 2.5 / 1e6 # (mol/cm^3)
+    Ki = 120 / 1e6 # (mol/cm^3)
     pBarK = 1.2e-3 # cm/s
     EFRT = (E*F) / (R*T)
     return pBarK * n**2 * EFRT * F * (Ko - Ki*exp(EFRT)) / (1 - exp(EFRT))
@@ -110,8 +110,8 @@ def leakageCurrent(v):
 
 def delayedCurrent(p, v):
     E = v + Constants["Vr"]; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
-    NaO = Constants["NaO"]  # mM
-    NaI = Constants["NaI"]  # mM
+    NaO = Constants["NaO"]  # (mol/cm^3)
+    NaI = Constants["NaI"]  # (mol/cm^3)
     pBarP = 0.54e-3 # cm/s
     EFRT = (E*F) / (R*T)
     return pBarP * p**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
@@ -148,10 +148,18 @@ Vm = [restingVoltage]
 def printStatus(t, v):
     print "t: " + str(t) + " V: " + str(v)
 
+def printVar(v, name):
+    print name + ": " + str(v)
 
 printStatus(0.0, last(Vm))
-Ga = (pi * d**2) / (4*RhoI * L)
+Ga = 1 / (RhoI * L)
 for i in range(0, int(T/dt)):
+    # printVar(m, 'm')
+    # printVar(h, 'h')
+    # printVar(n, 'n')
+    # printVar(p, 'p')
+    # printVar(Vm, 'Vm')
+
     iNa = sodiumCurrent(last(m), last(h), last(Vm))
     iK  = potassiumCurrent(last(n), last(Vm))
     iL  = leakageCurrent(last(Vm))
@@ -169,6 +177,10 @@ for i in range(0, int(T/dt)):
 
     Ve = RhoE * I / (4 * pi * r)
 
-    newV = dt / (cm*pi*d*l) * (-2*Ga*(Ve + last(Vm)) - pi*d*l *(ionicCurrent)) + last(Vm)
+    print iNa
+    print iK
+    print iL
+    print iP
+    newV = dt / (cm) * (-2*Ga*(Ve + last(Vm)) - (ionicCurrent)) + last(Vm)
     printStatus((i+1)*dt, newV)
     Vm.append(newV)
