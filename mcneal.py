@@ -4,6 +4,7 @@
 # from Hodgkin and Huxley, based on Boucher's (2011) paper
 
 from __future__ import division
+from scipy.integrate import odeint
 from math import exp, pi
 import numpy as np
 import pylab
@@ -21,61 +22,44 @@ Constants = {
 
 def alphaN(v):
     if v == 35: return 0.2
-    a = 1 - exp((35 - v)/10.0)
-    a = a**-1
-    a *= 0.02*(v-35)
-    return a
+    return 0.02*(v-35) * ((1 - exp((35 - v)/10.0)) ** -1)
 alphaN = np.vectorize(alphaN)
 
 def betaN(v):
     if v == 10: return 0.5
-    b = (1 - exp((v - 10)/10.0)) ** -1
-    b *= 0.05*(10 - v)
-    return b
+    return 0.05*(10 - v) * ((1 - exp((v - 10)/10.0)) ** -1)
 betaN = np.vectorize(betaN)
 
 ###### Sodium (Na) Channel (activating)
 def alphaM(v):
     if v == 22: return 1.08
-    a = (1 - exp((22 - v)/3.0)) ** -1
-    a *= 0.36*(v - 22)
-    return a
+    return 0.36*(v - 22) * ((1 - exp((22 - v)/3.0)) ** -1)
 alphaM = np.vectorize(alphaM)
 
 def betaM(v):
     if v == 13: return 8.0
-    b = (1 - exp((v - 13)/20.0)) ** -1
-    b *= 0.4*(13 - v)
-    return b
+    return 0.4*(13 - v) * ((1 - exp((v - 13)/20.0)) ** -1)
 betaM = np.vectorize(betaM)
 
 ###### Sodium (Na) Channel (inactivating)
 def alphaH(v):
     if v == -10: return 0.6
-    a = (1 - exp((v + 10)/6.0)) ** -1
-    a *= 0.1 * (-10 - v)
-    return a
+    return 0.1 * (-10 - v) * ((1 - exp((v + 10)/6.0)) ** -1)
 alphaH = np.vectorize(alphaH)
 
 def betaH(v):
-    b = (1 + exp((45 - v)/10.0)) ** -1
-    b *= 4.5
-    return b
+    return 4.5 * ((1 + exp((45 - v)/10.0)) ** -1)
 betaH = np.vectorize(betaH)
 
 ###### Non-specific Delayed Current Density (sodium!)
 def alphaP(v):
     if v == 40: return 0.06
-    a = (1 - exp((40 - v)/10)) ** -1
-    a *= 0.006 * (v-40)
-    return a
+    return 0.006 * (v-40) * ((1 - exp((40 - v)/10)) ** -1)
 alphaP = np.vectorize(alphaP)
 
 def betaP(v):
     if v == -25: return 1.8
-    b = (1 - exp((v + 25)/20)) ** -1
-    b *= 0.09 * (-25 - v)
-    return b
+    return 0.09 * (-25 - v) * ((1 - exp((v + 25)/20)) ** -1)
 betaP = np.vectorize(betaP)
 
 def plotAlphaBetaFunctions():
@@ -117,25 +101,22 @@ def iP(p, v):
     return pBarP * p**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
 
 def iIonic(m, h, n, p, v):
-    return iNa(last(m), last(h), last(v)) + iK(last(n), last(v)) + iL(last(v)) + iP(last(p), last(v))
+    return iNa(m, h, v) + iK(n, v) + iL(v) + iP(p, v)
 
 nInf  = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 mInf  = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 hInf  = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 pInf  = lambda v: alphaP(v)/(alphaP(v) + betaP(v))
 
-def last(list):
-    return list[len(list) - 1]
-
-restingVoltage = 0.0 # mV
-dt = 0.0000025 # ms
-T  = 1.0 # ms
-cm = 0.0002 # mF/cm^2
+restingVoltage = -0.1888767 # mV
+dt = 0.00025 # ms
+T  = 1 # ms
+cm = 0.002 # mF/cm^2
 D = 0.002 # cm (20microns)
 d = 0.7 * D # cm
 l = 0.00025 # cm (2.5 microns)
 r = 0.1  # cm (1mm)
-I = 0.3  # mA
+I = 0.3 # mA
 RhoE = 300e3 # mohm*cm
 RhoI = 110e3 # mohm*cm
 L = 0.2 # cm
@@ -149,56 +130,24 @@ p = pInf(restingVoltage)
 Vm = restingVoltage
 
 initialValues = [Vm, m, h, n, p]
+timeLine = [i*dt for i in range(0, int(T/dt))]
+abserr = 1.0e-7
+relerr = 1.0e-7
 
-def f(vals, t):
-    v, m, h, n, p = vals
-
+def f(values, t):
+    v, m, h, n, p = values
     funcs = [
-        (1 / (cm)) * (-2*Ga*(Ve + last(v)) - iIonic(m, h, n, p, v)),
-        alphaM(last(v))*(1 - last(m)) - betaM(last(v)) * last(m),
-        alphaH(last(v))*(1 - last(h)) - betaH(last(v)) * last(h),
-        alphaN(last(v))*(1 - last(n)) - betaN(last(v)) * last(n),
-        alphaP(last(v))*(1 - last(p)) - betaP(last(v)) * last(p)
+        (1 / (cm)) * (-2*Ga*(Ve + v) - iIonic(m, h, n, p, v)),
+        alphaM(v)*(1 - m) - betaM(v) * m,
+        alphaH(v)*(1 - h) - betaH(v) * h,
+        alphaN(v)*(1 - n) - betaN(v) * n,
+        alphaP(v)*(1 - p) - betaP(v) * p
     ]
-
     return funcs
 
-###############
-def printStatus(t, v):
-    print "t: " + str(t) + " V: " + str(v)
+solution = odeint(f, initialValues, timeLine, atol = abserr, rtol=relerr)
 
-def printVar(v, name):
-    print name + ": " + str(v)
-
-printStatus(0.0, last(Vm))
-for i in range(0, int(T/dt)):
-    # printVar(m, 'm')
-    # printVar(h, 'h')
-    # printVar(n, 'n')
-    # printVar(p, 'p')
-    # printVar(Vm, 'Vm')
-
-    iNav = iNa(last(m), last(h), last(Vm))
-    iKv  = iK(last(n), last(Vm))
-    iLv  = iL(last(Vm))
-    iPv  = iP(last(p), last(Vm))
-    ionicCurrent = iNav + iKv + iLv + iPv
-
-    mNew = (alphaM(last(Vm))*(1 - last(m)) - betaM(last(Vm)) * last(m)) * dt + last(m)
-    hNew = (alphaH(last(Vm))*(1 - last(h)) - betaH(last(Vm)) * last(h)) * dt + last(h)
-    nNew = (alphaN(last(Vm))*(1 - last(n)) - betaN(last(Vm)) * last(n)) * dt + last(n)
-    pNew = (alphaP(last(Vm))*(1 - last(p)) - betaP(last(Vm)) * last(p)) * dt + last(p)
-    m.append(mNew)
-    h.append(hNew)
-    n.append(nNew)
-    p.append(pNew)
-
-    Ve = RhoE * I / (4 * pi * r)
-
-    newV = dt / (cm) * (-2*Ga*(Ve + last(Vm)) - (ionicCurrent)) + last(Vm)
-    printStatus((i+1)*dt, newV)
-    Vm.append(newV)
-
-timeLine = [i*dt for i in range(0, int(T/dt))]
-pylab.plot(timeLine, Vm)
+pylab.plot(timeLine, solution[:,0])
+pylab.ylabel('V (mV)')
+pylab.xlabel('Time, t (ms)')
 pylab.show()
