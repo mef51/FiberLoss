@@ -168,9 +168,26 @@ iKSol = [iK(nSol[i], vSol[i]) for i in range(0, len(timeLine))]
 iPSol = [iP(pSol[i], vSol[i]) for i in range(0, len(timeLine))]
 iLSol = [iL(vSol[i]) for i in range(0, len(timeLine))]
 
-# pylab.plot(timeLine, solution[:,0])#, timeLine, [extPotential(t, I, r) for t in timeLine])
+pylab.subplot(1, 3, 0)
+pylab.plot(timeLine, solution[:,0])#, timeLine, [extPotential(t, I, r) for t in timeLine])
+pylab.title("Membrane Voltage")
+pylab.legend(('V'))
+pylab.ylabel('V (mV)')
+pylab.xlabel('Time (ms)')
+
+
+pylab.subplot(1, 3, 1)
 pylab.plot(timeLine, iNaSol, timeLine, iKSol, timeLine, iPSol, timeLine, iLSol)
+pylab.title("Ionic Currents")
 pylab.legend(('iNa', 'iK', 'iP', 'iL'))
 pylab.ylabel('Current (mA)')
-pylab.xlabel('Time, t (ms)')
+pylab.xlabel('Time (ms)')
+
+pylab.subplot(1, 3, 2)
+pylab.plot(timeLine, mSol, timeLine, hSol, timeLine, nSol, timeLine, pSol)
+pylab.title("Ionic Currents")
+pylab.legend(('m', 'h', 'n', 'p'))
+pylab.ylabel('Probability')
+pylab.xlabel('Time (ms)')
+
 pylab.show()
