@@ -141,13 +141,11 @@ Vm = restingVoltage
 
 initialValues = [Vm, m, h, n, p]
 timeLine = [i*dt for i in range(0, int(T/dt))]
-abserr = 1.0e-7
-relerr = 1.0e-7
 
 def f(values, t):
     v, m, h, n, p = values
     funcs = [
-        (1 / (cm*pi*d*l)) * (-2*Ga*(extPotential(t, I, r) + v) - pi*d*l*iIonic(m, h, n, p, v)),
+        (1 / (cm*pi*d*l)) * (Ga*(-2*extPotential(t, I, r) - 2*v) - pi*d*l*iIonic(m, h, n, p, v)),
         alphaM(v)*(1 - m) - betaM(v) * m,
         alphaH(v)*(1 - h) - betaH(v) * h,
         alphaN(v)*(1 - n) - betaN(v) * n,
@@ -155,9 +153,24 @@ def f(values, t):
     ]
     return funcs
 
-solution = odeint(f, initialValues, timeLine, atol = abserr, rtol=relerr)
+solution = odeint(f, initialValues, timeLine)
 
-pylab.plot(timeLine, solution[:,0] )#, timeLine, [extPotential(t, I, r) for t in timeLine])
-pylab.ylabel('V (mV)')
+vSol = solution[:,0]
+mSol = solution[:,1]
+hSol = solution[:,2]
+nSol = solution[:,3]
+pSol = solution[:,4]
+
+assert len(vSol) == len(mSol) == len(hSol) == len(nSol) == len(pSol) == len(timeLine)
+# current solutions
+iNaSol = [iNa(mSol[i], hSol[i], vSol[i]) for i in range(0, len(timeLine))]
+iKSol = [iK(nSol[i], vSol[i]) for i in range(0, len(timeLine))]
+iPSol = [iP(pSol[i], vSol[i]) for i in range(0, len(timeLine))]
+iLSol = [iL(vSol[i]) for i in range(0, len(timeLine))]
+
+# pylab.plot(timeLine, solution[:,0])#, timeLine, [extPotential(t, I, r) for t in timeLine])
+pylab.plot(timeLine, iNaSol, timeLine, iKSol, timeLine, iPSol, timeLine, iLSol)
+pylab.legend(('iNa', 'iK', 'iP', 'iL'))
+pylab.ylabel('Current (mA)')
 pylab.xlabel('Time, t (ms)')
 pylab.show()
