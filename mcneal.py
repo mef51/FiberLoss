@@ -103,6 +103,16 @@ def iP(p, v):
 def iIonic(m, h, n, p, v):
     return iNa(m, h, v) + iK(n, v) + iL(v) + iP(p, v)
 
+def getCurrent(t, current, tPulseStart=1, pulseWidth=3):
+    if tPulseStart <= t <= (tPulseStart + pulseWidth):
+        return current
+    else:
+        return 0
+
+# Ve
+def extPotential(t, I, distance):
+    return RhoE * getCurrent(t, I) / (4 * pi * distance)
+
 nInf  = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 mInf  = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 hInf  = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
@@ -110,18 +120,18 @@ pInf  = lambda v: alphaP(v)/(alphaP(v) + betaP(v))
 
 restingVoltage = 0 # mV
 dt = 0.00025 # ms
-T  = 1 # ms
+T  = 10 # ms
 cm = 0.002 # mF/cm^2
-D = 0.002 # cm (20microns)
+L = 0.2 # cm
+D = L/100 # cm (20microns)
 d = 0.7 * D # cm
 l = 0.00025 # cm (2.5 microns)
 r = 0.1  # cm (1mm)
 I = 0.3 # mA
 RhoE = 300e3 # mohm*cm
 RhoI = 110e3 # mohm*cm
-L = 0.2 # cm
+
 Ga = (pi*d**2) / (4 * RhoI * L)
-Ve = RhoE * I / (4 * pi * r)
 
 m = mInf(restingVoltage)
 h = hInf(restingVoltage)
@@ -137,7 +147,7 @@ relerr = 1.0e-7
 def f(values, t):
     v, m, h, n, p = values
     funcs = [
-        (1 / (cm*pi*d*l)) * (-2*Ga*(Ve + v) - pi*d*l*iIonic(m, h, n, p, v)),
+        (1 / (cm*pi*d*l)) * (-2*Ga*(extPotential(t, I, r) + v) - pi*d*l*iIonic(m, h, n, p, v)),
         alphaM(v)*(1 - m) - betaM(v) * m,
         alphaH(v)*(1 - h) - betaH(v) * h,
         alphaN(v)*(1 - n) - betaN(v) * n,
@@ -147,7 +157,7 @@ def f(values, t):
 
 solution = odeint(f, initialValues, timeLine, atol = abserr, rtol=relerr)
 
-pylab.plot(timeLine, solution[:,0])
+pylab.plot(timeLine, solution[:,0] )#, timeLine, [extPotential(t, I, r) for t in timeLine])
 pylab.ylabel('V (mV)')
 pylab.xlabel('Time, t (ms)')
 pylab.show()
