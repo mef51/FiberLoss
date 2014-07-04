@@ -108,7 +108,7 @@ mInf  = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 hInf  = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 pInf  = lambda v: alphaP(v)/(alphaP(v) + betaP(v))
 
-restingVoltage = -0.1888767 # mV
+restingVoltage = 0 # mV
 dt = 0.00025 # ms
 T  = 1 # ms
 cm = 0.002 # mF/cm^2
@@ -120,7 +120,7 @@ I = 0.3 # mA
 RhoE = 300e3 # mohm*cm
 RhoI = 110e3 # mohm*cm
 L = 0.2 # cm
-Ga = 1 / (RhoI * L)
+Ga = (pi*d**2) / (4 * RhoI * L)
 Ve = RhoE * I / (4 * pi * r)
 
 m = mInf(restingVoltage)
@@ -137,7 +137,7 @@ relerr = 1.0e-7
 def f(values, t):
     v, m, h, n, p = values
     funcs = [
-        (1 / (cm)) * (-2*Ga*(Ve + v) - iIonic(m, h, n, p, v)),
+        (1 / (cm*pi*d*l)) * (-2*Ga*(Ve + v) - pi*d*l*iIonic(m, h, n, p, v)),
         alphaM(v)*(1 - m) - betaM(v) * m,
         alphaH(v)*(1 - h) - betaH(v) * h,
         alphaN(v)*(1 - n) - betaN(v) * n,
