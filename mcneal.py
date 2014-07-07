@@ -73,6 +73,31 @@ def plotAlphaBetaFunctions():
     pylab.xlabel('Voltage (mV)')
     pylab.show()
 
+def plotCurrentsVoltagesAndGates():
+    pylab.subplot(1, 2, 1)
+    pylab.plot(timeLine, vSol)#, timeLine, [extPotential(t, I, r) for t in timeLine])
+    pylab.title("Membrane Voltage")
+    pylab.legend(('V'))
+    pylab.ylabel('V (mV)')
+    pylab.xlabel('Time (ms)')
+
+    pylab.subplot(2, 2, 2)
+    pylab.plot(timeLine, iNaSol, timeLine, iKSol, timeLine, iPSol, timeLine, iLSol)
+    pylab.title("Ionic Currents")
+    pylab.legend(('iNa', 'iK', 'iP', 'iL'))
+    pylab.ylabel('Current (mA)')
+    pylab.xlabel('Time (ms)')
+
+    pylab.subplot(2, 2, 4)
+    pylab.plot(timeLine, mSol, timeLine, hSol, timeLine, nSol, timeLine, pSol)
+    pylab.title("m, h, n, and p")
+    pylab.legend(('m', 'h', 'n', 'p'))
+    pylab.ylabel('Probability')
+    pylab.xlabel('Time (ms)')
+
+    pylab.tight_layout()
+    pylab.show()
+
 def iNa(m, h, v):
     E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     NaO = Constants["NaO"]  # (mol/cm^3)
@@ -168,26 +193,4 @@ iKSol = [iK(nSol[i], vSol[i]) for i in range(0, len(timeLine))]
 iPSol = [iP(pSol[i], vSol[i]) for i in range(0, len(timeLine))]
 iLSol = [iL(vSol[i]) for i in range(0, len(timeLine))]
 
-pylab.subplot(1, 2, 1)
-pylab.plot(timeLine, solution[:,0])#, timeLine, [extPotential(t, I, r) for t in timeLine])
-pylab.title("Membrane Voltage")
-pylab.legend(('V'))
-pylab.ylabel('V (mV)')
-pylab.xlabel('Time (ms)')
-
-pylab.subplot(2, 2, 2)
-pylab.plot(timeLine, iNaSol, timeLine, iKSol, timeLine, iPSol, timeLine, iLSol)
-pylab.title("Ionic Currents")
-pylab.legend(('iNa', 'iK', 'iP', 'iL'))
-pylab.ylabel('Current (mA)')
-pylab.xlabel('Time (ms)')
-
-pylab.subplot(2, 2, 4)
-pylab.plot(timeLine, mSol, timeLine, hSol, timeLine, nSol, timeLine, pSol)
-pylab.title("m, h, n, and p")
-pylab.legend(('m', 'h', 'n', 'p'))
-pylab.ylabel('Probability')
-pylab.xlabel('Time (ms)')
-
-pylab.tight_layout()
-pylab.show()
+plotCurrentsVoltagesAndGates()
