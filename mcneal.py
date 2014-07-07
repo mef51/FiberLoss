@@ -10,14 +10,19 @@ import numpy as np
 import pylab
 
 Constants = {
-    "Vr"    : -70,     # mV
-    "F"     : 964853.0,# C/mole
-    "R"     : 8.3144,  # J/K/mole
-    "T"     : 295.18,  # K
-    "gBarL" : 30.3, # mS/cm^2
-    "E_L"   : 0.026, # mV
-    "NaO"   : 114.5 / 1e6, # (mol/cm^3)
-    "NaI"   : 13.7 / 1e6  # (mol/cm^3)
+    "Vr"    : -70,         # mV
+    "F"     : 964853.0,    # C/mole
+    "R"     : 8.3144,      # J/K/mole
+    "T"     : 295.18,      # K
+    "gBarL" : 30.3,        # mS/cm^2
+    "E_L"   : 0.026,       # mV
+    "NaO"   : 114.5,       # mM
+    "NaI"   : 13.7,        # mM
+    "Ko"    : 2.5,         # mM
+    "Ki"    : 120,         # mM
+    "pBarNa": 8e-3,        # cm/s
+    "pBarK" : 1.2e-3,      # cm/s
+    "pBarP" : 0.54e-3      # cm/s
 }
 
 def alphaN(v):
@@ -102,15 +107,15 @@ def iNa(m, h, v):
     E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     NaO = Constants["NaO"]  # (mol/cm^3)
     NaI = Constants["NaI"]  # (mol/cm^3)
-    pBarNa = 8e-3 # cm/s
+    pBarNa = Constants["pBarNa"]
     EFRT = (E*F) / (R*T)
     return pBarNa * h * m**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
 
 def iK(n, v):
     E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
-    Ko = 2.5 / 1e6 # (mol/cm^3)
-    Ki = 120 / 1e6 # (mol/cm^3)
-    pBarK = 1.2e-3 # cm/s
+    Ko = Constants["Ko"]
+    Ki = Constants["Ki"]
+    pBarK = Constants["pBarK"]
     EFRT = (E*F) / (R*T)
     return pBarK * n**2 * EFRT * F * (Ko - Ki*exp(EFRT)) / (1 - exp(EFRT))
 
@@ -121,7 +126,7 @@ def iP(p, v):
     E = (v + Constants["Vr"])/1000; F = Constants["F"]; R = Constants["R"]; T = Constants["T"]
     NaO = Constants["NaO"]  # (mol/cm^3)
     NaI = Constants["NaI"]  # (mol/cm^3)
-    pBarP = 0.54e-3 # cm/s
+    pBarP = Constants["pBarP"]
     EFRT = (E*F) / (R*T)
     return pBarP * p**2 * EFRT * F * (NaO - NaI*exp(EFRT)) / (1 - exp(EFRT))
 
