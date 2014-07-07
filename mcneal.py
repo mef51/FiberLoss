@@ -16,10 +16,10 @@ Constants = {
     "T"     : 295.18,      # K
     "gBarL" : 30.3,        # mS/cm^2
     "E_L"   : 0.026,       # mV
-    "NaO"   : 114.5,       # mM
-    "NaI"   : 13.7,        # mM
-    "Ko"    : 2.5,         # mM
-    "Ki"    : 120,         # mM
+    "NaO"   : 114.5*1e6,   # mol/cm^3
+    "NaI"   : 13.7*1e6,    # mol/cm^3
+    "Ko"    : 2.5*1e6,     # mol/cm^3
+    "Ki"    : 120*1e6,     # mol/cm^3
     "pBarNa": 8e-3,        # cm/s
     "pBarK" : 1.2e-3,      # cm/s
     "pBarP" : 0.54e-3,     # cm/s
