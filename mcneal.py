@@ -22,7 +22,9 @@ Constants = {
     "Ki"    : 120,         # mM
     "pBarNa": 8e-3,        # cm/s
     "pBarK" : 1.2e-3,      # cm/s
-    "pBarP" : 0.54e-3      # cm/s
+    "pBarP" : 0.54e-3,     # cm/s
+    "RhoE"  : 300e3,       # mohm*cm
+    "RhoI"  : 110e3,       # mohm*cm
 }
 
 def alphaN(v):
@@ -144,7 +146,7 @@ def getCurrent(t, current, tPulseStart=1, pulseWidth=3):
 
 # Ve
 def extPotential(t, I, distance):
-    return RhoE * getCurrent(t, I) / (4 * pi * distance)
+    return (Constants["RhoE"] * getCurrent(t, I)) / (4 * pi * distance)
 
 nInf  = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 mInf  = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
@@ -161,10 +163,8 @@ d = 0.7 * D # cm
 l = 0.00025 # cm (2.5 microns)
 r = 0.1  # cm (1mm)
 I = 0.3 # mA
-RhoE = 300e3 # mohm*cm
-RhoI = 110e3 # mohm*cm
 
-Ga = (pi*d**2) / (4 * RhoI * L)
+Ga = (pi*d**2) / (4 * Constants["RhoI"] * L)
 
 m = mInf(restingVoltage)
 h = hInf(restingVoltage)
