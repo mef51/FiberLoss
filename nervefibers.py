@@ -43,14 +43,14 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : -65.5    *mV,         # V_rest (mv)
-            "cm"                 : 0.002   *mF/(cm**2), # mF/cm² membrane capacitance per unit area
+            "restingVoltage"     : 0       *mV,         # V_rest (mv)
+            "cm"                 : 1       *mF/(cm**2), # mF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
-            "sodiumPotential"    : 50.5   *mV,         # mV
-            "potassiumPotential" : -77.0   *mV,         # mv
-            "leakagePotential"   : -54.4    *mV,         # mV
+            "sodiumPotential"    : (50.5+70)    *mV,         # mV
+            "potassiumPotential" : (-77.0+70)   *mV,         # mv
+            "leakagePotential"   : (-54.4+70)   *mV,         # mV
             "externalResistivity": 300.0e3 *mohm*cm,    # mΩ•cm
             "internalResistivity": 110.0e3 *mohm*cm     # mΩ•cm also called axoplasm resistivity
         }
@@ -103,84 +103,93 @@ class AxonPositionNode:
         betaH = self.betaH = np.vectorize(betaH)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
+        def sodiumCurrent(V, m, h):
+            return self.params["gBarNa"] * (m**3) * h * (V - self.params["sodiumPotential"])
+        self.sodiumCurrent = sodiumCurrent
+
+        def potassiumCurrent(V, n):
+            return self.params["gBarK"]  * (n**4) * (V - self.params["potassiumPotential"])
+        self.potassiumCurrent = potassiumCurrent
+
+        def leakageCurrent(V):
+            return self.params["gBarL"]  * (V - self.params["leakagePotential"])
+        self.leakageCurrent = leakageCurrent
+
         log.infoVar(diameter, 'diameter')
         log.infoVar(length, 'length')
         log.infoVar(np.pi, 'pi')
         log.infoVar(params["cm"], 'cm')
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
-        # params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
-        params["Ga"] = 0.0
+        params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
 
         self.Vm = [params["restingVoltage"]] # The axon node's membrane potential
-        self.m  = mInf(params["restingVoltage"])
-        self.h  = hInf(params["restingVoltage"])
-        self.n  = nInf(params["restingVoltage"])
+        self.m  = [mInf(params["restingVoltage"])]
+        self.h  = [hInf(params["restingVoltage"])]
+        self.n  = [nInf(params["restingVoltage"])]
 
     # integrate response to stimulus current `stimulus`
     def step(self, stimulus, leftNode, rightNode, dt):
         I = stimulus # I[i-1]
-        lastVm = len(self.Vm) - 1
 
-        sodiumConductance    = self.params["gBarNa"] * (self.m**3) * self.h
-        potassiumConductance = self.params["gBarK"]  * (self.n**4)
-        leakageConductance   = self.params["gBarL"]
+        def last(l):
+            return l[len(l) - 1]
 
-        log.infoVar(sodiumConductance, 'sodiumConductance')
-        log.infoVar(potassiumConductance, 'potassiumConductance')
-        log.infoVar(leakageConductance, 'leakageConductance')
+        V, m, h, n = last(self.Vm), last(self.m), last(self.h), last(self.n)
 
-        log.infoVar(self.m, "self.m")
-        log.infoVar(self.h, "self.h")
-        log.infoVar(self.n, "self.n")
+        iNa = self.sodiumCurrent(V, m, h)
+        iK  = self.potassiumCurrent(V, n)
+        iL  = self.leakageCurrent(V)
+
+        log.infoVar(m, "self.m")
+        log.infoVar(h, "self.h")
+        log.infoVar(n, "self.n")
 
         def checkGates(gate):
             if not (0 < gate < 1):
-                log.error("Gating variable is out of range! D:")
+                log.error("Gating variable is out of range! D: " + str(gate))
                 exit()
 
-        for gate in [self.m, self.h, self.n]:
+        for gate in [m, h, n]:
             checkGates(gate)
 
         # integrate the equations on m, h, and n
-        self.m += (self.alphaM(self.Vm[lastVm]) * (1 - self.m) - self.betaM(self.Vm[lastVm])*self.m) * dt
-        self.h += (self.alphaH(self.Vm[lastVm]) * (1 - self.h) - self.betaH(self.Vm[lastVm])*self.h) * dt
-        self.n += (self.alphaN(self.Vm[lastVm]) * (1 - self.n) - self.betaN(self.Vm[lastVm])*self.n) * dt
-
-        # now integrate the changes in V
-        sodiumCurrent    = sodiumConductance    * (self.Vm[lastVm] - self.params["sodiumPotential"])
-        potassiumCurrent = potassiumConductance * (self.Vm[lastVm] - self.params["potassiumPotential"])
-        leakageCurrent   = leakageConductance   * (self.Vm[lastVm] - self.params["leakagePotential"])
+        newM = (self.alphaM(V) * (1 - m) - self.betaM(V)*m) * dt + m
+        newH = (self.alphaH(V) * (1 - h) - self.betaH(V)*h) * dt + h
+        newN = (self.alphaN(V) * (1 - n) - self.betaN(V)*n) * dt + n
 
         # MCNEALLLLLL (1976)
         def extV(stimulus, distance): # the external potential
             if mag(distance, cm) == 0:
                 return 0.0*mV
             else:
-                v = (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
-                return v
+                V = (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
+                return V
 
-        neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * self.Vm[lastVm]) # V_n-1 + V_n+1 - 2Vn
+        neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * V) # V_n-1 + V_n+1 - 2Vn
         neighbourExtPotential = extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
 
-        # surroundingCurrent = self.params["Ga"] * (neighbourPotential + neighbourExtPotential)
-        surroundingCurrent = I
-        ionicCurrent = np.pi * self.diameter * self.length * (sodiumCurrent + potassiumCurrent + leakageCurrent)
+        surroundingCurrent = self.params["Ga"] * (neighbourPotential + neighbourExtPotential)
+        ionicCurrent = np.pi * self.diameter * self.length * (iNa + iK + iL)
 
         log.infoVar(neighbourPotential, "neighbourPotential")
         log.infoVar(neighbourExtPotential, "neighbourExtPotential")
-        log.infoVar(sodiumCurrent, "sodiumCurrent")
-        log.infoVar(potassiumCurrent, "potassiumCurrent")
-        log.infoVar(leakageCurrent, "leakageCurrent")
-        log.infoVar(self.Vm[lastVm], "lastVm")
+        log.infoVar(iNa, "sodiumCurrent")
+        log.infoVar(iK, "potassiumCurrent")
+        log.infoVar(iL, "leakageCurrent")
+        log.infoVar(V, "lastVm")
 
-        newV = (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent) + self.Vm[lastVm]
+        # now integrate the changes in V
+        newV = (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent) + V
 
         log.infoVar(self.params["Cm"], "Cm")
         log.infoVar(surroundingCurrent, "surroundingCurrent")
         log.infoVar(ionicCurrent, "ionicCurrent")
         log.infoVar(newV, "newV")
 
+        self.m.append(newM)
+        self.h.append(newH)
+        self.n.append(newN)
         self.Vm.append(newV)
 
     def plotAlphaBetaFunctions(self):
@@ -208,7 +217,7 @@ class NerveFiber:
         axonalDiameter = self.axonalDiameter = 0.7 * diameter
         axonNodes = self.axonNodes = []
         for i in range(0, numNodes):
-            index = i - numNodes/2
+            index = i - int(numNodes/2)
             z = index*(axonalLength+internodalLength)
             axonNode = AxonPositionNode(z, axonalDiameter, axonalLength, index, internodalLength)
 
@@ -442,11 +451,11 @@ def plotCompoundPotential():
 ##############
 
 log.logLevel = log.ERROR
-log.logLevel = log.INFO
+# log.logLevel = log.INFO
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 0.000003 *mA,    # mA. the current applied at the surface
+    "magnitude" : 0.0003 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.1 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -455,7 +464,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 1,    # the number of axon nodes each fiber has
+    "numNodes"     : 11,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
