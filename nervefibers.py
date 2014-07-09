@@ -7,7 +7,7 @@ import pylab
 import random
 import log
 
-USE_UNITS = True
+USE_UNITS = False
 
 if USE_UNITS:
     from unum.units import *
@@ -115,6 +115,15 @@ class AxonPositionNode:
             return self.params["gBarL"]  * (V - self.params["leakagePotential"])
         self.leakageCurrent = leakageCurrent
 
+        # MCNEALLLLLL (1976)
+        def extV(stimulus, distance): # the external potential
+            if mag(distance, cm) == 0:
+                return 0.0*mV
+            else:
+                V = (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
+                return V
+        self.extV = extV
+
         log.infoVar(diameter, 'diameter')
         log.infoVar(length, 'length')
         log.infoVar(np.pi, 'pi')
@@ -131,6 +140,7 @@ class AxonPositionNode:
     # integrate response to stimulus current `stimulus`
     def step(self, stimulus, leftNode, rightNode, dt):
         I = stimulus # I[i-1]
+        extV = self.extV
 
         def last(l):
             return l[len(l) - 1]
@@ -157,14 +167,6 @@ class AxonPositionNode:
         newM = (self.alphaM(V) * (1 - m) - self.betaM(V)*m) * dt + m
         newH = (self.alphaH(V) * (1 - h) - self.betaH(V)*h) * dt + h
         newN = (self.alphaN(V) * (1 - n) - self.betaN(V)*n) * dt + n
-
-        # MCNEALLLLLL (1976)
-        def extV(stimulus, distance): # the external potential
-            if mag(distance, cm) == 0:
-                return 0.0*mV
-            else:
-                V = (self.params["externalResistivity"] * stimulus) / (4 * np.pi * distance)
-                return V
 
         neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * V) # V_n-1 + V_n+1 - 2Vn
         neighbourExtPotential = extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
@@ -202,6 +204,53 @@ class AxonPositionNode:
         pylab.ylabel(u'Rate Constant (ms^-1)')
         pylab.xlabel('Voltage (mV)')
         pylab.savefig('alphaBetaFunctions.jpg')
+
+    def plotCurrentsVoltagesAndGates(self, timeLine, stimulusCurrent, fiberNum, plotStimulus=True):
+        vSol, mSol, hSol, nSol = self.Vm, self.m, self.h, self.n
+        extPotentialSol = [self.extV(stimulusCurrent[i], self.distance) for i, t in enumerate(timeLine)]
+
+        # strip out units
+        vSol = [mag(val, mV) for val in vSol]
+        mSol = [mag(val, 1) for val in mSol]
+        hSol = [mag(val, 1) for val in hSol]
+        nSol = [mag(val, 1) for val in nSol]
+        extPotentialSol = [mag(val, mA) for val in extPotentialSol]
+
+        # current solutions
+        iNaSol = [self.sodiumCurrent(vSol[i], mSol[i], hSol[i]) for i in range(0, len(timeLine))]
+        iKSol  = [self.potassiumCurrent(vSol[i], nSol[i]) for i in range(0, len(timeLine))]
+        iLSol  = [self.leakageCurrent(vSol[i]) for i in range(0, len(timeLine))]
+
+        pylab.subplot(1, 2, 1)
+        if plotStimulus:
+            pylab.plot(timeLine, vSol, timeLine, extPotentialSol)
+        else:
+            pylab.plot(timeLine, vSol)
+        pylab.title("Membrane Voltage of node #" + str(self.index) + ": d = " + str("{0:.2f}".format(self.distance)) + "cm")
+        pylab.legend(('V', 'Stimulus'))
+        pylab.ylabel('V (mV)')
+        pylab.xlabel('Time (ms)')
+        pylab.grid()
+
+        pylab.subplot(2, 2, 2)
+        pylab.plot(timeLine, iNaSol, timeLine, iKSol, timeLine, iLSol)
+        pylab.title("Ionic Currents")
+        pylab.legend(('iNa', 'iK', 'iL'))
+        pylab.ylabel('Current (mA)')
+        pylab.xlabel('Time (ms)')
+        pylab.grid()
+
+        pylab.subplot(2, 2, 4)
+        pylab.plot(timeLine, mSol, timeLine, hSol, timeLine, nSol)
+        pylab.title("m, h, and n")
+        pylab.legend(('m', 'h', 'n'))
+        pylab.ylabel('Probability')
+        pylab.xlabel('Time (ms)')
+        pylab.grid()
+
+        pylab.tight_layout()
+        pylab.savefig("graphs/axons/axon" + str(self.index) + "fiber" + str(fiberNum) + ".jpg")
+        pylab.close()
 
 class NerveFiber:
     """
@@ -428,6 +477,16 @@ def plotMembranePotentialOfNodes(nerve):
             print "plotting axon #" + str(node.index) + " in fiber #" + str(i) + "..."
             plotMembranePotential(curr, node, i)
 
+def plotInfoOfNodes(nerve, plotStimulus=True):
+    curr = []
+    for j in range(0, len(simulation.timeLine)):
+        curr.append(getCurrent(j*dt, stimulusCurrent["magnitude"]))
+
+    for fiberNum, fiber in enumerate(nerve["fibers"]):
+        for k, node in enumerate(fiber.axonNodes):
+            print "plotting axon #" + str(node.index) + " in fiber #" + str(fiberNum) + "..."
+            node.plotCurrentsVoltagesAndGates(simulation.timeLine, curr, fiberNum, plotStimulus)
+
 def plotCompoundPotential():
     compoundPotential = []
     for i in range(0, int(T/dt) + 1):
@@ -455,7 +514,7 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 0.0003 *mA,    # mA. the current applied at the surface
+    "magnitude" : 0.3 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.1 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -490,6 +549,6 @@ dt   = 0.025*ms # ms
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
-plotMembranePotentialOfNodes(nerve)
+plotInfoOfNodes(nerve, plotStimulus=False)
 
 print "Done."
