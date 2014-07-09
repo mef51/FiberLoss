@@ -7,7 +7,7 @@ import pylab
 import random
 import log
 
-USE_UNITS = False
+USE_UNITS = True
 
 if USE_UNITS:
     from unum.units import *
@@ -214,7 +214,7 @@ class AxonPositionNode:
         mSol = [mag(val, 1) for val in mSol]
         hSol = [mag(val, 1) for val in hSol]
         nSol = [mag(val, 1) for val in nSol]
-        extPotentialSol = [mag(val, mA) for val in extPotentialSol]
+        extPotentialSol = [mag(val, mV) for val in extPotentialSol]
 
         # current solutions
         iNaSol = [self.sodiumCurrent(vSol[i], mSol[i], hSol[i]) for i in range(0, len(timeLine))]
