@@ -7,7 +7,7 @@ import pylab
 import random
 import log
 
-USE_UNITS = True
+USE_UNITS = False
 
 if USE_UNITS:
     from unum.units import *
@@ -209,24 +209,29 @@ class AxonPositionNode:
         vSol, mSol, hSol, nSol = self.Vm, self.m, self.h, self.n
         extPotentialSol = [self.extV(stimulusCurrent[i], self.distance) for i, t in enumerate(timeLine)]
 
-        # strip out units
-        vSol = [mag(val, mV) for val in vSol]
-        mSol = [mag(val, 1) for val in mSol]
-        hSol = [mag(val, 1) for val in hSol]
-        nSol = [mag(val, 1) for val in nSol]
-        extPotentialSol = [mag(val, mV) for val in extPotentialSol]
-
         # current solutions
         iNaSol = [self.sodiumCurrent(vSol[i], mSol[i], hSol[i]) for i in range(0, len(timeLine))]
         iKSol  = [self.potassiumCurrent(vSol[i], nSol[i]) for i in range(0, len(timeLine))]
         iLSol  = [self.leakageCurrent(vSol[i]) for i in range(0, len(timeLine))]
+
+        # strip out units
+        vSol   = [mag(val, mV) for val in vSol]
+        mSol   = [mag(val, 1) for val in mSol]
+        hSol   = [mag(val, 1) for val in hSol]
+        nSol   = [mag(val, 1) for val in nSol]
+        iNaSol = [mag(val, mA/(cm*cm)) for val in iNaSol]
+        iKSol  = [mag(val, mA/(cm*cm)) for val in iKSol]
+        iLSol  = [mag(val, mA/(cm*cm)) for val in iLSol]
+        extPotentialSol = [mag(val, mV) for val in extPotentialSol]
 
         pylab.subplot(1, 2, 1)
         if plotStimulus:
             pylab.plot(timeLine, vSol, timeLine, extPotentialSol)
         else:
             pylab.plot(timeLine, vSol)
-        pylab.title("Membrane Voltage of node #" + str(self.index) + ": d = " + str("{0:.2f}".format(self.distance)) + "cm")
+
+        d = mag(self.distance, cm)
+        pylab.title("Membrane Voltage of node #" + str(self.index) + ": d = " + str("{0:.2f}".format(d)) + "cm")
         pylab.legend(('V', 'Stimulus'))
         pylab.ylabel('V (mV)')
         pylab.xlabel('Time (ms)')
@@ -514,7 +519,7 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : 0.3 *mA,    # mA. the current applied at the surface
+    "magnitude" : -0.3 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.1 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -523,7 +528,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 11,    # the number of axon nodes each fiber has
+    "numNodes"     : 1,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm

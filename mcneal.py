@@ -162,7 +162,7 @@ D = L/100 # cm (20microns)
 d = 0.7 * D # cm
 l = 0.00025 # cm (2.5 microns)
 r = 0.1  # cm (1mm)
-I = 0.3 # mA
+I = -0.3 # mA
 
 Ga = (pi*d**2) / (4 * Constants["RhoI"] * L)
 
