@@ -430,18 +430,17 @@ def plotCrossSectionPositions(plotStimulusPos=True):
         x.append(mag(stimulusCurrent["x"], cm))
         y.append(mag(stimulusCurrent["y"], cm))
 
-    pylab.scatter(x, y, color='r', marker='o', s=0)
+    pylab.scatter(x, y, color='r', marker='o', s=10)
     pylab.ylabel('y (cm)')
     pylab.xlabel('x (cm)')
     pylab.axis('equal')
-    for i in range(0, len(nerve["fibers"])):
-        circle = pylab.Circle((x[i],y[i]), mag(nerve["fibers"][i].diameter/(2.0), cm), alpha=0.5)
+    for i, fiber in enumerate(nerve["fibers"]):
+        circle = pylab.Circle((x[i],y[i]), mag(fiber.diameter/(2.0), cm), alpha=0.5)
         pylab.gca().add_artist(circle)
 
     if plotStimulusPos:
         pylab.axhline(y = mag(stimulusCurrent["y"], cm), color='k', linestyle='--')
-        pylab.text(mag(stimulusCurrent["x"], cm)-4, mag(stimulusCurrent["y"], cm)-0.5, "inside")
-        pylab.text(mag(stimulusCurrent["x"], cm)-4, mag(stimulusCurrent["y"], cm)+0.2, "outside")
+        pylab.text(mag(stimulusCurrent["x"], cm), mag(stimulusCurrent["y"], cm), "stimulus")
     pylab.show()
 
 def plotMembranePotential(current, node, fiberNum, showFigure=False):
@@ -519,16 +518,16 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : -0.3 *mA,    # mA. the current applied at the surface
+    "magnitude" : -0.6 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
-    "y"         : 0.1 *cm,    # cm
+    "y"         : 0.3 *cm,    # cm
     "z"         : 0   *cm     # cm
 }
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 1,    # the number of axon nodes each fiber has
+    "numNodes"     : 11,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
@@ -548,6 +547,7 @@ for i in range(0, nerve["numFibers"]):
 print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
 # plotNodePositions()
+plotCrossSectionPositions()
 
 T    = 55*ms    # ms
 dt   = 0.025*ms # ms
