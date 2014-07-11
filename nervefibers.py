@@ -27,6 +27,10 @@ mohm = Unum.unit('mohm', 10**-3 * ohm) # milliohms
 def mag(v, unit):
     return float(v/unit)
 
+# little utility for getting the last element of a list
+def last(l):
+    return l[len(l) - 1]
+
 class AxonPositionNode:
     """
     A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952 .
@@ -141,9 +145,6 @@ class AxonPositionNode:
     def step(self, stimulus, leftNode, rightNode, dt):
         I = stimulus # I[i-1]
         extV = self.extV
-
-        def last(l):
-            return l[len(l) - 1]
 
         V, m, h, n = last(self.Vm), last(self.m), last(self.h), last(self.n)
 
@@ -492,21 +493,22 @@ def plotInfoOfNodes(nerve, plotStimulus=True):
             node.plotCurrentsVoltagesAndGates(simulation.timeLine, curr, fiberNum, plotStimulus)
 
 def plotCompoundPotential():
-    compoundPotential = []
-    for i in range(0, int(T/dt) + 1):
-        compoundPotential += [0]
+    compoundPotential = [0 for i in range(0, int(T/dt) + 1)]
 
-    for i in range(0, len(nerve['fibers'])):
-        axon = nerve['fibers'][i]
-        for k, v in enumerate(axon.Vm):
+    # add up the last node in each fiber. these nodes should all have the same index,
+    # but are not necessarily next to each other. They should be close though
+    for fiber in nerve['fibers']:
+        node = last(fiber.axonNodes)
+        for k, v in enumerate(node.Vm):
             compoundPotential[k] += v
 
     pylab.figure()
     pylab.plot(simulation.timeLine, compoundPotential)
     pylab.xlabel('Time (ms)')
     pylab.ylabel('Voltage (mV)')
-    pylab.title('Sum of all Action Potentials')
-    pylab.savefig("sumOfPotentials.jpg")
+    pylab.title('Sum of all Action Potentials at last Node')
+    pylab.grid()
+    pylab.savefig("graphs/sumOfPotentials.jpg")
     pylab.close()
 
 ##############
@@ -518,7 +520,7 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : -0.6 *mA,    # mA. the current applied at the surface
+    "magnitude" : -5 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.3 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -526,7 +528,7 @@ stimulusCurrent = {
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
-    "numFibers"    : 1,
+    "numFibers"    : 20,
     "numNodes"     : 11,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
@@ -555,5 +557,6 @@ simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
 plotInfoOfNodes(nerve, plotStimulus=False)
+plotCompoundPotential()
 
 print "Done."
