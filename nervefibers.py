@@ -22,6 +22,7 @@ uF = Unum.unit('uF', 10**-6 * F) # microFarads
 
 mS = Unum.unit('mS', 10**-3 * S) # milliSiemens
 mohm = Unum.unit('mohm', 10**-3 * ohm) # milliohms
+kohm = Unum.unit('kohm', 10**3 * ohm) # kiloohms
 
 # strips the unit from a number and returns just the number. `unit` is a Unum unit.
 def mag(v, unit):
@@ -48,15 +49,15 @@ class AxonPositionNode:
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
             "restingVoltage"     : 0       *mV,         # V_rest (mv)
-            "cm"                 : 1       *mF/(cm**2), # mF/cm² membrane capacitance per unit area
+            "cm"                 : 1       *uF/(cm**2), # mF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
             "sodiumPotential"    : (50.5+70)    *mV,         # mV
             "potassiumPotential" : (-77.0+70)   *mV,         # mv
             "leakagePotential"   : (-54.4+70)   *mV,         # mV
-            "externalResistivity": 300.0e3 *mohm*cm,    # mΩ•cm
-            "internalResistivity": 110.0e3 *mohm*cm     # mΩ•cm also called axoplasm resistivity
+            "externalResistivity": 300.0 *ohm*cm,            # Ω•cm
+            "internalResistivity": 110 *ohm*cm             # Ω•cm also called axoplasm resistivity
         }
 
         ###### Potassium (K) Channel
@@ -133,7 +134,7 @@ class AxonPositionNode:
         log.infoVar(np.pi, 'pi')
         log.infoVar(params["cm"], 'cm')
 
-        params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (mF)
+        params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (uF)
         params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
 
         self.Vm = [params["restingVoltage"]] # The axon node's membrane potential
@@ -186,6 +187,7 @@ class AxonPositionNode:
         newV = (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent) + V
 
         log.infoVar(self.params["Cm"], "Cm")
+        log.infoVar(self.params["Ga"], "Ga")
         log.infoVar(surroundingCurrent, "surroundingCurrent")
         log.infoVar(ionicCurrent, "ionicCurrent")
         log.infoVar(newV, "newV")
@@ -520,7 +522,7 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : -5 *mA,    # mA. the current applied at the surface
+    "magnitude" : -1 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.3 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -528,8 +530,8 @@ stimulusCurrent = {
 
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
-    "numFibers"    : 20,
-    "numNodes"     : 11,    # the number of axon nodes each fiber has
+    "numFibers"    : 1,
+    "numNodes"     : 1,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
@@ -549,14 +551,13 @@ for i in range(0, nerve["numFibers"]):
 print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
 # plotNodePositions()
-plotCrossSectionPositions()
+# plotCrossSectionPositions()
 
 T    = 55*ms    # ms
 dt   = 0.025*ms # ms
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
-plotInfoOfNodes(nerve, plotStimulus=False)
-plotCompoundPotential()
+plotInfoOfNodes(nerve, plotStimulus=True)
 
 print "Done."
