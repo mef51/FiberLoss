@@ -62,49 +62,45 @@ class AxonPositionNode:
 
         ###### Potassium (K) Channel
         def alphaN(v):
-            if v == 35*mV: return 0.2 * (1/ms)
-            a = 1 - np.exp(float((35*mV - v)/(10.0*mV)))
-            a = a**-1
-            a *= 0.02*(1/(mV*ms))*(v-35*mV)
-            return a
+            if v == -55*mV: return (0.1*(1/ms))
+            a = -(v + 55*mV)/(10.0*mV)
+            a = 1.0/(1 - np.exp(float(a)))
+            a *= v + 55*mV
+            return a * 0.01*(1/(ms*mV))
+
         self.alphaN = alphaN = np.vectorize(alphaN)
 
         def betaN(v):
-            if v == 10*mV: return 0.5 * (1/ms)
-            b = (1 - np.exp(float((v - 10*mV)/(10.0*mV)))) ** -1
-            b *= 0.05*(1/(mV*ms))*(10*mV - v)
-            return b
+            b = -(v+55*mV)/(10.0*mV)
+            return 0.125 * (1/ms) * np.exp(float(b))
         self.betaN = betaN = np.vectorize(betaN)
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         ###### Sodium (Na) Channel (activating)
         def alphaM(v):
-            if v == 22*mV: return 1.08 * (1/ms)
-            a = (1 - np.exp(float((22*mV - v)/(3.0*mV)))) ** -1
-            a *= 0.36*(1/(mV*ms))*(v - 22*mV)
-            return a
+            if v == -40*mV: return 1.0 * (1/ms)
+            a = -(v + 40*mV)/(10.0*mV)
+            a = 1.0/(1 - np.exp(float(a)))
+            a *= v + 40*mV
+            return a * 0.1*(1/(ms*mV))
         self.alphaM = alphaM = np.vectorize(alphaM)
 
         def betaM(v):
-            if v == 13*mV: return 8.0 * (1/ms)
-            b = (1 - np.exp(float((v - 13*mV)/(20.0*mV)))) ** -1
-            b *= 0.4*(1/(mV*ms))*(13*mV - v)
+            b = -(v + 65*mV)/(18.0*mV)
+            b = 4 * (1/ms) * np.exp(float(b))
             return b
         self.betaM = betaM = np.vectorize(betaM)
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 
         ###### Sodium (Na) Channel (inactivating)
         def alphaH(v):
-            if v == -10*mV: return 0.6 * (1/ms)
-            a = (1 - np.exp(float((v + 10*mV)/(6.0*mV)))) ** -1
-            a *= 0.1 * (1/(mV*ms)) * (-10*mV - v)
-            return a
+            a = -(v + 65*mV)/(20*mV)
+            return 0.07 * (1/ms) * np.exp(float(a))
         self.alphaH = alphaH = np.vectorize(alphaH)
 
         def betaH(v):
-            b = (1 + np.exp(float((45*mV - v)/(10.0*mV)))) ** -1
-            b *= 4.5 * (1/ms)
-            return b
+            b = -(v + 35*mV)/(10.0*mV)
+            return 1.0 * (1/ms) / (1 + np.exp(float(b)))
         betaH = self.betaH = np.vectorize(betaH)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
