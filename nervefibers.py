@@ -57,7 +57,7 @@ class AxonPositionNode:
             "potassiumPotential" : (-77.0+70)   *mV,         # mv
             "leakagePotential"   : (-54.4+70)   *mV,         # mV
             "externalResistivity": 300.0 *ohm*cm,            # Ω•cm
-            "internalResistivity": 110 *ohm*cm             # Ω•cm also called axoplasm resistivity
+            "internalResistivity": 110/2 *ohm*cm             # Ω•cm also called axoplasm resistivity
         }
 
         ###### Potassium (K) Channel
@@ -136,6 +136,7 @@ class AxonPositionNode:
 
         params["Cm"] = params["cm"] * np.pi * diameter * length # membrane capacitance (uF)
         params["Ga"] = (np.pi*diameter**2) / (4*params["internalResistivity"] * internodalLength) # axial conductance (mS)
+        params["Kappa"] = 1 / (params["internalResistivity"] * internodalLength) # axial conductance (mS)
 
         self.Vm = [params["restingVoltage"]] # The axon node's membrane potential
         self.m  = [mInf(params["restingVoltage"])]
@@ -188,6 +189,7 @@ class AxonPositionNode:
 
         log.infoVar(self.params["Cm"], "Cm")
         log.infoVar(self.params["Ga"], "Ga")
+        log.infoVar(self.params["Kappa"], "Kappa")
         log.infoVar(surroundingCurrent, "surroundingCurrent")
         log.infoVar(ionicCurrent, "ionicCurrent")
         log.infoVar(newV, "newV")
@@ -196,6 +198,7 @@ class AxonPositionNode:
         self.h.append(newH)
         self.n.append(newN)
         self.Vm.append(newV)
+        # exit()
 
     def plotAlphaBetaFunctions(self):
         v = np.arange(-75, 125) # millivolts
@@ -325,7 +328,7 @@ class NerveBundleSimulation:
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
 
 # represents a square wave current strimulus
-def getCurrent(t, current, tPulseStart=0*ms, pulseWidth=25*ms):
+def getCurrent(t, current, tPulseStart=0*ms, pulseWidth=550*ms):
     if tPulseStart <= t <= (tPulseStart + pulseWidth):
         return current
     else:
@@ -522,7 +525,7 @@ log.logLevel = log.ERROR
 
 # Current Stimulus
 stimulusCurrent = {
-    "magnitude" : -1 *mA,    # mA. the current applied at the surface
+    "magnitude" : -3 *mA,    # mA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.3 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -531,7 +534,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 1,    # the number of axon nodes each fiber has
+    "numNodes"     : 11,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
