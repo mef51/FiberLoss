@@ -231,6 +231,7 @@ class AxonPositionNode:
         extPotentialSol = [mag(val, mV) for val in extPotentialSol]
 
         pylab.subplot(1, 2, 1)
+        pylab.ylim(-200, 150)
         if plotStimulus:
             pylab.plot(timeLine, vSol, timeLine, extPotentialSol)
         else:
