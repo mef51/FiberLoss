@@ -144,7 +144,7 @@ class AxonPositionNode:
         self.n  = [nInf(params["restingVoltage"])]
 
     # integrate response to stimulus current `stimulus`
-    def step(self, stimulus, leftNode, rightNode, dt):
+    def step(self, stimulus, leftNode, rightNode, dt, exciteCenterOnly=False):
         I = stimulus # I[i-1]
         extV = self.extV
 
@@ -172,7 +172,17 @@ class AxonPositionNode:
         newN = (self.alphaN(V) * (1 - n) - self.betaN(V)*n) * dt + n
 
         neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * V) # V_n-1 + V_n+1 - 2Vn
-        neighbourExtPotential = extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
+        neighbourExtPotential = 0
+
+        if exciteCenterOnly: # only add up the terms for the node with index 0
+            if self.index == 0:
+                neighbourExtPotential += - (2 * extV(I, self.distance))
+            elif leftNode["n"] == 0:
+                neighbourExtPotential += extV(I, leftNode["d"])
+            elif rightNode["n"] == 0:
+                neighbourExtPotential += extV(I, rightNode["d"])
+        else:
+            neighbourExtPotential += extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
 
         surroundingCurrent = self.params["Ga"] * (neighbourPotential + neighbourExtPotential)
         ionicCurrent = np.pi * self.diameter * self.length * (iNa + iK + iL)
@@ -211,9 +221,11 @@ class AxonPositionNode:
         pylab.xlabel('Voltage (mV)')
         pylab.savefig('alphaBetaFunctions.jpg')
 
-    def plotCurrentsVoltagesAndGates(self, timeLine, stimulusCurrent, fiberNum, plotStimulus=True):
+    def plotCurrentsVoltagesAndGates(self, timeLine, stimulusCurrent, fiberNum, plotStimulus=True, exciteCenterOnly=False):
         vSol, mSol, hSol, nSol = self.Vm, self.m, self.h, self.n
-        extPotentialSol = [self.extV(stimulusCurrent[i], self.distance) for i, t in enumerate(timeLine)]
+        n = 1
+        if exciteCenterOnly and self.index != 0: n = 0
+        extPotentialSol = [self.extV(n*stimulusCurrent[i], n*self.distance) for i, t in enumerate(timeLine)]
 
         # current solutions
         iNaSol = [self.sodiumCurrent(vSol[i], mSol[i], hSol[i]) for i in range(0, len(timeLine))]
@@ -297,7 +309,7 @@ class NerveBundleSimulation:
         self.dt = dt
         self.timeLine = np.arange(0, mag((T+dt), ms), mag(dt, ms))
 
-    def simulate(self, nerve, stimulusCurrent):
+    def simulate(self, nerve, stimulusCurrent, exciteCenterOnly=False):
         for t in range(1, len(self.timeLine)):
             if self.timeLine[t] % 1 == 0.0:
                 print "Simulation Time: " + str(self.timeLine[t])
@@ -308,16 +320,20 @@ class NerveBundleSimulation:
                     effectiveCurrent = getCurrent(t*self.dt, stimulusCurrent["magnitude"])
 
                     lastStep = len(axonNode.Vm) - 1
-                    leftNode  = {"V": 0.0*mV, "d": 0.0*cm}
-                    rightNode = {"V": 0.0*mV, "d": 0.0*cm}
+                    leftNode  = {"V": 0.0*mV, "d": 0.0*cm, "n": "novalue"}
+                    rightNode = {"V": 0.0*mV, "d": 0.0*cm, "n": "novalue"}
 
                     if (k-1) > -1:
-                        leftNode["V"] = fiber.axonNodes[k-1].Vm[lastStep]
-                        leftNode["d"] = fiber.axonNodes[k-1].distance
+                        node = fiber.axonNodes[k-1]
+                        leftNode["V"] = node.Vm[lastStep]
+                        leftNode["d"] = node.distance
+                        leftNode["n"] = node.index
 
                     if (k+1) < len(fiber.axonNodes):
-                        rightNode["V"] = fiber.axonNodes[k+1].Vm[lastStep]
-                        rightNode["d"] = fiber.axonNodes[k+1].distance
+                        node = fiber.axonNodes[k+1]
+                        rightNode["V"] = node.Vm[lastStep]
+                        rightNode["d"] = node.distance
+                        rightNode["n"] = node.index
 
                     # step the current axon forward IN TIIIME ♪♪
                     # print "Stepping axon #" + str(k) + " in fiber #" + str(i)
@@ -326,7 +342,7 @@ class NerveBundleSimulation:
                     log.infoVar(axonNode.index, 'node')
                     log.infoVar(leftNode["V"], "leftVoltage")
                     log.infoVar(rightNode["V"], "rightVoltage")
-                    axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt)
+                    axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt, exciteCenterOnly)
 
 # represents a square wave current strimulus
 def getCurrent(t, current, tPulseStart=0*ms, pulseWidth=550*ms):
@@ -488,7 +504,7 @@ def plotMembranePotentialOfNodes(nerve):
             print "plotting axon #" + str(node.index) + " in fiber #" + str(i) + "..."
             plotMembranePotential(curr, node, i)
 
-def plotInfoOfNodes(nerve, plotStimulus=True):
+def plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=False):
     curr = []
     for j in range(0, len(simulation.timeLine)):
         curr.append(getCurrent(j*dt, stimulusCurrent["magnitude"]))
@@ -496,7 +512,7 @@ def plotInfoOfNodes(nerve, plotStimulus=True):
     for fiberNum, fiber in enumerate(nerve["fibers"]):
         for k, node in enumerate(fiber.axonNodes):
             print "plotting axon #" + str(node.index) + " in fiber #" + str(fiberNum) + "..."
-            node.plotCurrentsVoltagesAndGates(simulation.timeLine, curr, fiberNum, plotStimulus)
+            node.plotCurrentsVoltagesAndGates(simulation.timeLine, curr, fiberNum, plotStimulus, exciteCenterOnly)
 
 def plotCompoundPotential():
     compoundPotential = [0 for i in range(0, int(T/dt) + 1)]
@@ -559,9 +575,11 @@ print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
 T    = 55*ms    # ms
 dt   = 0.025*ms # ms
+centerOnly = True
+
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
-simulation.simulate(nerve, stimulusCurrent) # modifies `nerve`
-plotInfoOfNodes(nerve, plotStimulus=True)
+simulation.simulate(nerve, stimulusCurrent, exciteCenterOnly=centerOnly) # modifies `nerve`
+plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=centerOnly)
 
 print "Done."
