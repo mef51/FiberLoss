@@ -321,8 +321,11 @@ class NerveBundleSimulation:
                     effectiveCurrent = getCurrent(t*self.dt, stimulusCurrent["magnitude"])
 
                     lastStep = len(axonNode.Vm) - 1
-                    leftNode  = {"V": 0.0*mV, "d": 0.0*cm, "n": "novalue"}
-                    rightNode = {"V": 0.0*mV, "d": 0.0*cm, "n": "novalue"}
+
+                    # initialize the left and right nodes to have the same values as the current node.
+                    # this is so that they don't become current sinks (Boucher 2012 eq. 17 and 18)
+                    leftNode  = {"V": axonNode.Vm[lastStep], "d": axonNode.distance, "n": axonNode.index}
+                    rightNode = {"V": axonNode.Vm[lastStep], "d": axonNode.distance, "n": axonNode.index}
 
                     if (k-1) > -1:
                         node = fiber.axonNodes[k-1]
