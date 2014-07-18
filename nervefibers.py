@@ -57,7 +57,7 @@ class AxonPositionNode:
             "potassiumPotential" : (-77.0+70)   *mV,         # mv
             "leakagePotential"   : (-54.4+70)   *mV,         # mV
             "externalResistivity": 300.0 *ohm*cm,            # Ω•cm
-            "internalResistivity": 110/2 *ohm*cm             # Ω•cm also called axoplasm resistivity
+            "internalResistivity": 110/3.4 *ohm*cm             # Ω•cm also called axoplasm resistivity
         }
 
         ###### Potassium (K) Channel
@@ -184,7 +184,7 @@ class AxonPositionNode:
         else:
             neighbourExtPotential += extV(I, leftNode["d"]) + extV(I, rightNode["d"]) - (2 * extV(I, self.distance))
 
-        surroundingCurrent = self.params["Ga"] * (neighbourPotential + neighbourExtPotential)
+        surroundingCurrent = self.params["Ga"] * (neighbourPotential + neighbourExtPotential*0)
         ionicCurrent = np.pi * self.diameter * self.length * (iNa + iK + iL)
 
         log.infoVar(neighbourPotential, "neighbourPotential")
@@ -194,8 +194,9 @@ class AxonPositionNode:
         log.infoVar(iL, "leakageCurrent")
         log.infoVar(V, "lastVm")
 
+        if self.index != 0: I = 0
         # now integrate the changes in V
-        newV = (dt / self.params["Cm"]) * (surroundingCurrent - ionicCurrent) + V
+        newV = (dt / self.params["Cm"]) * (surroundingCurrent + I - ionicCurrent) + V
 
         log.infoVar(self.params["Cm"], "Cm")
         log.infoVar(self.params["Ga"], "Ga")
@@ -541,8 +542,9 @@ log.logLevel = log.ERROR
 # log.logLevel = log.INFO
 
 # Current Stimulus
+# threshold is ~12uA/cm^2 or 2.9e-6uA
 stimulusCurrent = {
-    "magnitude" : -3 *mA,    # mA. the current applied at the surface
+    "magnitude" : 25.9e-6 *uA,    # uA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.3 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -551,7 +553,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 11,    # the number of axon nodes each fiber has
+    "numNodes"     : 61,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
@@ -575,7 +577,7 @@ print "Placed " + str(len(nerve["fibers"])) + " fibers."
 
 T    = 55*ms    # ms
 dt   = 0.025*ms # ms
-centerOnly = True
+centerOnly = False
 
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
