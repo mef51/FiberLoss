@@ -48,63 +48,58 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : 0       *mV,         # V_rest (mv)
+            "restingVoltage"     : -65.5       *mV,         # V_rest (mv)
             "cm"                 : 1       *uF/(cm**2), # mF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
-            "sodiumPotential"    : (50.5+54.404)    *mV,         # mV
-            "potassiumPotential" : (-77.0+54.404)   *mV,         # mv
-            "leakagePotential"   : (-54.4+54.404)   *mV,         # mV
+            "sodiumPotential"    : (50.5)    *mV,         # mV
+            "potassiumPotential" : (-77.0)   *mV,         # mv
+            "leakagePotential"   : (-54.4)   *mV,         # mV
             "externalResistivity": 300.0 *ohm*cm,            # Ω•cm
             "internalResistivity": 110/3.4 *ohm*cm             # Ω•cm also called axoplasm resistivity
         }
 
         ###### Potassium (K) Channel
         def alphaN(v):
-            if v == 35*mV: return 0.2 * (1/ms)
-            a = 1 - np.exp(float((35*mV - v)/(10.0*mV)))
-            a = a**-1
-            a *= 0.02*(1/(mV*ms))*(v-35*mV)
-            return a
+            if v == -55*mV: return (0.1*(1/ms))
+            a = -(v + 55*mV)/(10.0*mV)
+            a = 1.0/(1 - np.exp(float(a)))
+            a *= v + 55*mV
+            return a * 0.01*(1/(ms*mV))
         self.alphaN = alphaN = np.vectorize(alphaN)
 
         def betaN(v):
-            if v == 10*mV: return 0.5 * (1/ms)
-            b = (1 - np.exp(float((v - 10*mV)/(10.0*mV)))) ** -1
-            b *= 0.05*(1/(mV*ms))*(10*mV - v)
-            return b
+            b = -(v+55*mV)/(10.0*mV)
+            return 0.125 * (1/ms) * np.exp(float(b))
         self.betaN = betaN = np.vectorize(betaN)
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
 
         ###### Sodium (Na) Channel (activating)
         def alphaM(v):
-            if v == 22*mV: return 1.08 * (1/ms)
-            a = (1 - np.exp(float((22*mV - v)/(3.0*mV)))) ** -1
-            a *= 0.36*(1/(mV*ms))*(v - 22*mV)
-            return a
+            if v == -40*mV: return 1.0 * (1/ms)
+            a = -(v + 40*mV)/(10.0*mV)
+            a = 1.0/(1 - np.exp(float(a)))
+            a *= v + 40*mV
+            return a * 0.1*(1/(ms*mV))
         self.alphaM = alphaM = np.vectorize(alphaM)
 
         def betaM(v):
-            if v == 13*mV: return 8.0 * (1/ms)
-            b = (1 - np.exp(float((v - 13*mV)/(20.0*mV)))) ** -1
-            b *= 0.4*(1/(mV*ms))*(13*mV - v)
+            b = -(v + 65*mV)/(18.0*mV)
+            b = 4 * (1/ms) * np.exp(float(b))
             return b
         self.betaM = betaM = np.vectorize(betaM)
         mInf = self.mInf = lambda v: alphaM(v)/(alphaM(v) + betaM(v))
 
         ###### Sodium (Na) Channel (inactivating)
         def alphaH(v):
-            if v == -10*mV: return 0.6 * (1/ms)
-            a = (1 - np.exp(float((v + 10*mV)/(6.0*mV)))) ** -1
-            a *= 0.1 * (1/(mV*ms)) * (-10*mV - v)
-            return a
+            a = -(v + 65*mV)/(20*mV)
+            return 0.07 * (1/ms) * np.exp(float(a))
         self.alphaH = alphaH = np.vectorize(alphaH)
 
         def betaH(v):
-            b = (1 + np.exp(float((45*mV - v)/(10.0*mV)))) ** -1
-            b *= 4.5 * (1/ms)
-            return b
+            b = -(v + 35*mV)/(10.0*mV)
+            return 1.0 * (1/ms) / (1 + np.exp(float(b)))
         betaH = self.betaH = np.vectorize(betaH)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
@@ -547,7 +542,7 @@ log.logLevel = log.ERROR
 # Current Stimulus
 # threshold is ~12uA/cm^2 or 2.9e-6uA
 stimulusCurrent = {
-    "magnitude" : 25.9e-6 *uA,    # uA. the current applied at the surface
+    "magnitude" : 100*25.9e-6 *uA,    # uA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.3 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -556,7 +551,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 61,    # the number of axon nodes each fiber has
+    "numNodes"     : 11,    # the number of axon nodes each fiber has
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
