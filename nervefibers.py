@@ -53,9 +53,9 @@ class AxonPositionNode:
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
-            "sodiumPotential"    : (50.5+70)    *mV,         # mV
-            "potassiumPotential" : (-77.0+70)   *mV,         # mv
-            "leakagePotential"   : (-54.4+70)   *mV,         # mV
+            "sodiumPotential"    : (50.5+54.404)    *mV,         # mV
+            "potassiumPotential" : (-77.0+54.404)   *mV,         # mv
+            "leakagePotential"   : (-54.4+54.404)   *mV,         # mV
             "externalResistivity": 300.0 *ohm*cm,            # Ω•cm
             "internalResistivity": 110/3.4 *ohm*cm             # Ω•cm also called axoplasm resistivity
         }
