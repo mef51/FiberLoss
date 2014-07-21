@@ -48,15 +48,15 @@ class AxonPositionNode:
 
         # Hodgkin-Huxley Parametahs (from the papah!)
         params = self.params = {
-            "restingVoltage"     : -65.5       *mV,         # V_rest (mv)
+            "restingVoltage"     : -65.5   *mV,         # V_rest (mv)
             "cm"                 : 1       *uF/(cm**2), # mF/cm² membrane capacitance per unit area
             "gBarNa"             : 120.0   *mS/(cm**2), # mS/cm² sodium conductance per unit area
             "gBarK"              : 36.0    *mS/(cm**2), # mS/cm² potassium conductance per unit area
             "gBarL"              : 0.25    *mS/(cm**2), # mS/cm² leakage current conductance per unit area
-            "sodiumPotential"    : (50.5)    *mV,         # mV
-            "potassiumPotential" : (-77.0)   *mV,         # mv
-            "leakagePotential"   : (-54.4)   *mV,         # mV
-            "externalResistivity": 300.0 *ohm*cm,            # Ω•cm
+            "sodiumPotential"    : 50      *mV,         # mV
+            "potassiumPotential" : -77     *mV,         # mv
+            "leakagePotential"   : -54.4   *mV,         # mV
+            "externalResistivity": 300.0   *ohm*cm,            # Ω•cm
             "internalResistivity": 110/3.4 *ohm*cm             # Ω•cm also called axoplasm resistivity
         }
 
@@ -542,7 +542,7 @@ log.logLevel = log.ERROR
 # Current Stimulus
 # threshold is ~12uA/cm^2 or 2.9e-6uA
 stimulusCurrent = {
-    "magnitude" : 100*25.9e-6 *uA,    # uA. the current applied at the surface
+    "magnitude" : 25.9e-6 *uA,    # uA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.3 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -551,7 +551,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 11,    # the number of axon nodes each fiber has
+    "numNodes"     : 101,    # the number of axon nodes each fiber has. Should be an odd number.
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
@@ -573,7 +573,7 @@ print "Placed " + str(len(nerve["fibers"])) + " fibers."
 # plotNodePositions()
 # plotCrossSectionPositions()
 
-T    = 55*ms    # ms
+T    = 110*ms    # ms
 dt   = 0.025*ms # ms
 centerOnly = False
 
