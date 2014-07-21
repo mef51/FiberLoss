@@ -70,7 +70,7 @@ class AxonPositionNode:
         self.alphaN = alphaN = np.vectorize(alphaN)
 
         def betaN(v):
-            b = -(v+55*mV)/(10.0*mV)
+            b = -(v+65*mV)/(80.0*mV)
             return 0.125 * (1/ms) * np.exp(float(b))
         self.betaN = betaN = np.vectorize(betaN)
         nInf = self.nInf   = lambda v: alphaN(v)/(alphaN(v) + betaN(v))
