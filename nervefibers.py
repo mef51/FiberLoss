@@ -306,6 +306,8 @@ class NerveBundleSimulation:
         self.timeLine = np.arange(0, mag((T+dt), ms), mag(dt, ms))
 
     def simulate(self, nerve, stimulusCurrent, exciteCenterOnly=False):
+        self.nerve = nerve
+        self.stimulusCurrent = stimulusCurrent
         for t in range(1, len(self.timeLine)):
             if self.timeLine[t] % 1 == 0.0:
                 print "Simulation Time: " + str(self.timeLine[t])
@@ -342,6 +344,47 @@ class NerveBundleSimulation:
                     log.infoVar(leftNode["V"], "leftVoltage")
                     log.infoVar(rightNode["V"], "rightVoltage")
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt, exciteCenterOnly)
+
+    def dumpJSON(self, filename):
+        import json
+        outputFile = open('data.json', 'w')
+
+        {
+            "timeLine": [1, 2, 3, 4, 5],
+            "fibers": [
+                    {
+                        "nodes": {
+                            "index": 0,
+                            "distanceFromStimulus": 0.2,
+                            "voltage": [1, 2, 3, 4],
+                            "m": [1, 2, 3, 4],
+                            "h": [1, 2, 3, 4],
+                            "n": [1, 2, 3, 4],
+                            "iNa": [1, 2, 3, 4],
+                            "iK": [1, 2, 3, 4],
+                            "iL": [1, 2, 3, 4]
+                        }
+                    },
+                    {
+                        "nodes": {
+
+                        }
+                    }
+                ]
+        }
+
+        data = {}
+        data["timeLine"] = self.timeLine.tolist()
+        data["fibers"] = {} # a map from integers to maps
+        for i, fiber in enumerate(self.nerve["fibers"]):
+            data["fibers"][i] = {}
+            for k, node in enumerate(fiber.axonNodes):
+                data["fibers"][i][k] = {
+
+                }
+
+        print self.nerve["fibers"][0].axonNodes[0].Vm
+        exit()
 
 # represents a square wave current strimulus
 def getCurrent(t, current, tPulseStart=0*ms, pulseWidth=550*ms):
@@ -551,7 +594,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 101,    # the number of axon nodes each fiber has. Should be an odd number.
+    "numNodes"     : 3,    # the number of axon nodes each fiber has. Should be an odd number.
     "fibers"       : [],
     "radius"       : 0.2    *cm, # cm
     "x"            : 0.0    *cm, # cm
@@ -573,13 +616,14 @@ print "Placed " + str(len(nerve["fibers"])) + " fibers."
 # plotNodePositions()
 # plotCrossSectionPositions()
 
-T    = 110*ms    # ms
+T    = 55*ms    # ms
 dt   = 0.025*ms # ms
 centerOnly = False
 
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent, exciteCenterOnly=centerOnly) # modifies `nerve`
-plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=centerOnly)
+# plotInfoOfNodes(nerve, plotStimulus=False, exciteCenterOnly=centerOnly)
+simulation.dumpJSON('data.json')
 
 print "Done."
