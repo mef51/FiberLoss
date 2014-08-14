@@ -281,6 +281,7 @@ class NerveFiber:
         self.x = x
         self.y = y
         self.diameter = diameter
+        self.axonalLength = axonalLength
         self.internodalLength = internodalLength = diameter * 100 # McNeal (1976)
 
         axonalDiameter = self.axonalDiameter = 0.7 * diameter
@@ -306,6 +307,8 @@ class NerveBundleSimulation:
         self.timeLine = np.arange(0, mag((T+dt), ms), mag(dt, ms))
 
     def simulate(self, nerve, stimulusCurrent, exciteCenterOnly=False):
+        self.nerve = nerve
+        self.stimulusCurrent = stimulusCurrent
         for t in range(1, len(self.timeLine)):
             if self.timeLine[t] % 1 == 0.0:
                 print "Simulation Time: " + str(self.timeLine[t])
@@ -342,6 +345,54 @@ class NerveBundleSimulation:
                     log.infoVar(leftNode["V"], "leftVoltage")
                     log.infoVar(rightNode["V"], "rightVoltage")
                     axonNode.step(effectiveCurrent, leftNode, rightNode, self.dt, exciteCenterOnly)
+
+    def dumpJSON(self, filename):
+        import json
+        outputFile = open(filename, 'w')
+
+        data = {}
+        data["timeLine"] = self.timeLine.tolist()
+        data["stimulusCurrent"] = {
+            "magnitude": self.stimulusCurrent["magnitude"],
+            "x": self.stimulusCurrent["x"],
+            "y": self.stimulusCurrent["y"],
+            "z": self.stimulusCurrent["z"]
+        }
+
+        data["fibers"] = [] # an array of objects
+        for j, fiber in enumerate(self.nerve["fibers"]):
+            data["fibers"].append({
+                "x": fiber.x,
+                "y": fiber.y,
+                "diameter": fiber.diameter,
+                "internodalLength": fiber.internodalLength,
+                "axonalLength": fiber.axonalLength,
+                "nodes": []
+            })
+
+            for k, node in enumerate(fiber.axonNodes):
+                iNaSol = [node.sodiumCurrent(node.Vm[i], node.m[i], node.h[i]) for i in range(0, len(self.timeLine))]
+                iKSol  = [node.potassiumCurrent(node.Vm[i], node.n[i]) for i in range(0, len(self.timeLine))]
+                iLSol  = [node.leakageCurrent(node.Vm[i]) for i in range(0, len(self.timeLine))]
+                curr = [getCurrent(t, self.stimulusCurrent["magnitude"]) for t in self.timeLine]
+                extPotentialSol = [node.extV(curr[i], node.distance) for i, _ in enumerate(self.timeLine)]
+
+                data["fibers"][j]["nodes"].append({
+                    "index": node.index,
+                    "distanceFromStimulus": node.distance,
+                    "voltage": node.Vm,
+                    "m": node.m,
+                    "h": node.h,
+                    "n": node.n,
+                    "iNa": iNaSol,
+                    "iK": iKSol,
+                    "iL": iLSol,
+                    "externalPotential": extPotentialSol
+                })
+
+        print "Writing file " + outputFile.name + "..."
+        outputFile.write(json.dumps(data))
+        print "Done."
 
 # represents a square wave current strimulus
 def getCurrent(t, current, tPulseStart=0*ms, pulseWidth=550*ms):
@@ -580,6 +631,7 @@ centerOnly = False
 simulation = NerveBundleSimulation(T, dt)
 print "Starting simulation..."
 simulation.simulate(nerve, stimulusCurrent, exciteCenterOnly=centerOnly) # modifies `nerve`
-plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=centerOnly)
+plotInfoOfNodes(nerve, plotStimulus=False, exciteCenterOnly=centerOnly)
+simulation.dumpJSON('data.json')
 
 print "Done."
