@@ -37,11 +37,14 @@ class AxonPositionNode:
     A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952 .
     This class is meant for creating axons with a specific location
     """
-    def __init__(self, z, diameter, length, index, internodalLength):
+    def __init__(self, z, diameter, length, index, internodalLength, damagedChannels=0.0):
         # position
         self.z = z               # position down the fiber
         self.diameter = diameter # the diameter of the node
         self.length = length     # the length of the node
+
+        # the proportion of sodium ion channels in the membrane that are damaged
+        self.damagedChannels = damagedChannels
 
         # each axon in a node is labelled with a number (n). the axon closest to the stimulus is numbered n = 0
         self.index = index
@@ -56,8 +59,9 @@ class AxonPositionNode:
             "sodiumPotential"    : 50      *mV,         # mV
             "potassiumPotential" : -77     *mV,         # mv
             "leakagePotential"   : -54.4   *mV,         # mV
-            "externalResistivity": 300.0   *ohm*cm,            # Ω•cm
-            "internalResistivity": 110/3.4 *ohm*cm             # Ω•cm also called axoplasm resistivity
+            "externalResistivity": 300.0   *ohm*cm,     # Ω•cm
+            "internalResistivity": 110/3.4 *ohm*cm,     # Ω•cm also called axoplasm resistivity
+            "leftShift"          : 35      *mV
         }
 
         ###### Potassium (K) Channel
@@ -103,8 +107,9 @@ class AxonPositionNode:
         betaH = self.betaH = np.vectorize(betaH)
         hInf = self.hInf   = lambda v: alphaH(v)/(alphaH(v) + betaH(v))
 
-        def sodiumCurrent(V, m, h):
-            return self.params["gBarNa"] * (m**3) * h * (V - self.params["sodiumPotential"])
+        def sodiumCurrent(V, m, h, mLS, hLS):
+            current = self.params["gBarNa"] * (V - self.params["sodiumPotential"])
+            return  current * (m**3 * h * (1 - self.damagedChannels) + mLS**3 * hLS * self.damagedChannels)
         self.sodiumCurrent = sodiumCurrent
 
         def potassiumCurrent(V, n):
@@ -138,14 +143,21 @@ class AxonPositionNode:
         self.h  = [hInf(params["restingVoltage"])]
         self.n  = [nInf(params["restingVoltage"])]
 
+        # Nav-CLS (Boucher 2012), the m and h variables are left shifted for damaged channels
+        self.mLS = [mInf(params["restingVoltage"] + self.params["leftShift"])]
+        self.hLS = [hInf(params["restingVoltage"] + self.params["leftShift"])]
+
+        self.plotSteadyStateActivations()
+
     # integrate response to stimulus current `stimulus`
     def step(self, stimulus, leftNode, rightNode, dt, exciteCenterOnly=False):
         I = stimulus # I[i-1]
         extV = self.extV
+        leftShift = self.params["leftShift"]
 
-        V, m, h, n = last(self.Vm), last(self.m), last(self.h), last(self.n)
+        V, m, h, n, mLS, hLS = last(self.Vm), last(self.m), last(self.h), last(self.n), last(self.mLS), last(self.hLS)
 
-        iNa = self.sodiumCurrent(V, m, h)
+        iNa = self.sodiumCurrent(V, m, h, mLS, hLS)
         iK  = self.potassiumCurrent(V, n)
         iL  = self.leakageCurrent(V)
 
@@ -165,6 +177,8 @@ class AxonPositionNode:
         newM = (self.alphaM(V) * (1 - m) - self.betaM(V)*m) * dt + m
         newH = (self.alphaH(V) * (1 - h) - self.betaH(V)*h) * dt + h
         newN = (self.alphaN(V) * (1 - n) - self.betaN(V)*n) * dt + n
+        newMLS = (self.alphaM(V + leftShift) * (1 - mLS) - self.betaM(V + leftShift)*mLS) * dt + mLS
+        newHLS = (self.alphaH(V + leftShift) * (1 - hLS) - self.betaH(V + leftShift)*hLS) * dt + hLS
 
         neighbourPotential = leftNode["V"] + rightNode["V"] - (2 * V) # V_n-1 + V_n+1 - 2Vn
         neighbourExtPotential = 0
@@ -203,8 +217,9 @@ class AxonPositionNode:
         self.m.append(newM)
         self.h.append(newH)
         self.n.append(newN)
+        self.mLS.append(newMLS)
+        self.hLS.append(newHLS)
         self.Vm.append(newV)
-        # exit()
 
     def plotAlphaBetaFunctions(self):
         v = np.arange(-75, 125) # millivolts
@@ -217,14 +232,26 @@ class AxonPositionNode:
         pylab.xlabel('Voltage (mV)')
         pylab.savefig('alphaBetaFunctions.jpg')
 
+    def plotSteadyStateActivations(self):
+        v = np.arange(-150, 50) # millivolts
+        leftShift = self.params["leftShift"]
+        mInf, hInf, nInf = self.mInf, self.hInf, self.nInf
+        pylab.figure()
+        pylab.plot(v, mInf(v), v, hInf(v), v, nInf(v), v, mInf(v + leftShift), v, hInf(v + leftShift))
+        pylab.legend(('m', 'h', 'n', 'mLS', 'hLS'))
+        pylab.title('Steady state values of ion channel gating variables')
+        pylab.ylabel('Magnitude')
+        pylab.xlabel('Voltage (mV)')
+        pylab.savefig("mhn.jpg")
+
     def plotCurrentsVoltagesAndGates(self, timeLine, stimulusCurrent, fiberNum, plotStimulus=True, exciteCenterOnly=False):
-        vSol, mSol, hSol, nSol = self.Vm, self.m, self.h, self.n
+        vSol, mSol, hSol, nSol, mLSSol, hLSSol = self.Vm, self.m, self.h, self.n, self.mLS, self.hLS
         n = 1
         if exciteCenterOnly and self.index != 0: n = 0
         extPotentialSol = [self.extV(n*stimulusCurrent[i], n*self.distance) for i, t in enumerate(timeLine)]
 
         # current solutions
-        iNaSol = [self.sodiumCurrent(vSol[i], mSol[i], hSol[i]) for i in range(0, len(timeLine))]
+        iNaSol = [self.sodiumCurrent(vSol[i], mSol[i], hSol[i], mLSSol[i], hLSSol[i]) for i in range(0, len(timeLine))]
         iKSol  = [self.potassiumCurrent(vSol[i], nSol[i]) for i in range(0, len(timeLine))]
         iLSol  = [self.leakageCurrent(vSol[i]) for i in range(0, len(timeLine))]
 
@@ -371,19 +398,23 @@ class NerveBundleSimulation:
             })
 
             for k, node in enumerate(fiber.axonNodes):
-                iNaSol = [node.sodiumCurrent(node.Vm[i], node.m[i], node.h[i]) for i in range(0, len(self.timeLine))]
-                iKSol  = [node.potassiumCurrent(node.Vm[i], node.n[i]) for i in range(0, len(self.timeLine))]
-                iLSol  = [node.leakageCurrent(node.Vm[i]) for i in range(0, len(self.timeLine))]
+                Vm, m, h, n, mLS, hLS = node.Vm, node.m, node.h, node.n, node.mLS, node.hLS
+
+                iNaSol = [node.sodiumCurrent(Vm[i], m[i], h[i], mLS[i], hLS[i]) for i in range(0, len(self.timeLine))]
+                iKSol  = [node.potassiumCurrent(Vm[i], n[i]) for i in range(0, len(self.timeLine))]
+                iLSol  = [node.leakageCurrent(Vm[i]) for i in range(0, len(self.timeLine))]
                 curr = [getCurrent(t, self.stimulusCurrent["magnitude"]) for t in self.timeLine]
                 extPotentialSol = [node.extV(curr[i], node.distance) for i, _ in enumerate(self.timeLine)]
 
                 data["fibers"][j]["nodes"].append({
                     "index": node.index,
                     "distanceFromStimulus": node.distance,
-                    "voltage": node.Vm,
-                    "m": node.m,
-                    "h": node.h,
-                    "n": node.n,
+                    "voltage": Vm,
+                    "m": m,
+                    "h": h,
+                    "n": n,
+                    "mLS": mLS,
+                    "hLS": hLS,
                     "iNa": iNaSol,
                     "iK": iKSol,
                     "iL": iLSol,
@@ -602,7 +633,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 201,    # the number of axon nodes each fiber has. Should be an odd number.
+    "numNodes"     : 11,    # the number of axon nodes each fiber has. Should be an odd number.
     "fibers"       : [],
     "radius"       : 0.0    *cm, # cm
     "x"            : 0.0    *cm, # cm
@@ -624,7 +655,7 @@ print "Placed " + str(len(nerve["fibers"])) + " fibers."
 # plotNodePositions()
 # plotCrossSectionPositions()
 
-T    = 220*ms    # ms
+T    = 25*ms    # ms
 dt   = 0.025*ms # ms
 centerOnly = False
 
