@@ -37,7 +37,7 @@ class AxonPositionNode:
     A node of Ranvier on an Axon, as modelled by Hodgkin and Huxley in 1952 .
     This class is meant for creating axons with a specific location
     """
-    def __init__(self, z, diameter, length, index, internodalLength, damagedChannels=0.0):
+    def __init__(self, z, diameter, length, index, internodalLength, damagedChannels):
         # position
         self.z = z               # position down the fiber
         self.diameter = diameter # the diameter of the node
@@ -246,6 +246,7 @@ class AxonPositionNode:
 
     def plotCurrentsVoltagesAndGates(self, timeLine, stimulusCurrent, fiberNum, plotStimulus=True, exciteCenterOnly=False):
         vSol, mSol, hSol, nSol, mLSSol, hLSSol = self.Vm, self.m, self.h, self.n, self.mLS, self.hLS
+
         n = 1
         if exciteCenterOnly and self.index != 0: n = 0
         extPotentialSol = [self.extV(n*stimulusCurrent[i], n*self.distance) for i, t in enumerate(timeLine)]
@@ -273,7 +274,9 @@ class AxonPositionNode:
             pylab.plot(timeLine, vSol)
 
         d = mag(self.distance, cm)
-        pylab.title("Membrane Voltage of node #" + str(self.index) + ": d = " + str("{0:.2f}".format(d)) + "cm")
+        titleStr = "Vm of node #" + str(self.index) + ": d = " + str("{0:.2f}".format(d)) + "cm."
+        titleStr += "AC = " + str(self.damagedChannels)
+        pylab.title(titleStr)
         pylab.legend(('V', 'Stimulus'))
         pylab.ylabel('V (mV)')
         pylab.xlabel('Time (ms)')
@@ -288,9 +291,14 @@ class AxonPositionNode:
         pylab.grid()
 
         pylab.subplot(2, 2, 4)
-        pylab.plot(timeLine, mSol, timeLine, hSol, timeLine, nSol)
-        pylab.title("m, h, and n")
-        pylab.legend(('m', 'h', 'n'))
+        if self.damagedChannels == 0:
+            pylab.plot(timeLine, mSol, timeLine, hSol, timeLine, nSol)
+            pylab.title("m, h, and n")
+            pylab.legend(('m', 'h', 'n'))
+        else:
+            pylab.plot(timeLine, mSol, timeLine, hSol, timeLine, nSol, timeLine, mLSSol, timeLine, hLSSol)
+            pylab.title("m, h, and n with left-shifts")
+            pylab.legend(('m', 'h', 'n', 'mLS', 'hLS'))
         pylab.ylabel('Probability')
         pylab.xlabel('Time (ms)')
         pylab.grid()
@@ -304,19 +312,25 @@ class NerveFiber:
     Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
     by myelin). Axonal Length is in centimetres.
     """
-    def __init__(self, x, y, diameter, numNodes, axonalLength):
+    def __init__(self, x, y, diameter, numNodes, axonalLength, damageMap):
         self.x = x
         self.y = y
         self.diameter = diameter
         self.axonalLength = axonalLength
         self.internodalLength = internodalLength = diameter * 100 # McNeal (1976)
+        self.damageMap = damageMap
 
         axonalDiameter = self.axonalDiameter = 0.7 * diameter
-        axonNodes = self.axonNodes = []
+        axonNodes = self.axonNodes = [] # da CANONICAL list of nodes in da fiber bro
         for i in range(0, numNodes):
             index = i - int(numNodes/2)
             z = index*(axonalLength+internodalLength)
-            axonNode = AxonPositionNode(z, axonalDiameter, axonalLength, index, internodalLength)
+
+            damage = 0.0
+            if index in damageMap.keys():
+                damage = damageMap[index]
+
+            axonNode = AxonPositionNode(z, axonalDiameter, axonalLength, index, internodalLength, damage)
 
             nodePos = (self.x, self.y, axonNode.z)  # (x, y, z)
             currPos = (stimulusCurrent["x"], stimulusCurrent["y"], stimulusCurrent["z"]) # (x, y, z)
@@ -409,6 +423,7 @@ class NerveBundleSimulation:
                 data["fibers"][j]["nodes"].append({
                     "index": node.index,
                     "distanceFromStimulus": node.distance,
+                    "damagedChannels": node.damagedChannels,
                     "voltage": Vm,
                     "m": m,
                     "h": h,
@@ -483,7 +498,7 @@ def placeFiberInNerve(nerve, maxAttempts = 1000):
                         amountToShrink = (fiber.diameter/2.0 + diameter/2.0) - distBetweenFibers
                         diameter -= amountToShrink * 2
 
-        return NerveFiber(x, y, diameter, nerve["numNodes"], nerve["axonalLength"])
+        return NerveFiber(x, y, diameter, nerve["numNodes"], nerve["axonalLength"], nerve["damageMap"])
 
     fiber = placeFiber(maxAttempts)
     # make sure fiber isn't too big or small
@@ -641,7 +656,10 @@ nerve = {
     "z"            : 0.0    *cm, # cm
     "minFiberDiam" : 0.0019 *cm, # cm
     "maxFiberDiam" : 0.0021 *cm, # cm
-    "axonalLength" : 2.5e-4 *cm # cm
+    "axonalLength" : 2.5e-4 *cm, # cm
+    "damageMap"       : {           # a map of node indices to the proportion of damaged channels on that node.
+        0 : 0.5,
+    }
 }
 
 # Create and place the axons
@@ -660,9 +678,10 @@ dt   = 0.025*ms # ms
 centerOnly = False
 
 simulation = NerveBundleSimulation(T, dt)
-print "Starting simulation..."
+print "Starting simulation... Length =", str(T), "ms. Step =", str(dt), "ms."
+print "Points:", str(T/dt)
 simulation.simulate(nerve, stimulusCurrent, exciteCenterOnly=centerOnly) # modifies `nerve`
-plotInfoOfNodes(nerve, plotStimulus=False, exciteCenterOnly=centerOnly)
-simulation.dumpJSON('data.json')
+plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=centerOnly)
+# simulation.dumpJSON('data.json')
 
 print "Done."
