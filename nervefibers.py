@@ -147,8 +147,6 @@ class AxonPositionNode:
         self.mLS = [mInf(params["restingVoltage"] + self.params["leftShift"])]
         self.hLS = [hInf(params["restingVoltage"] + self.params["leftShift"])]
 
-        self.plotSteadyStateActivations()
-
     # integrate response to stimulus current `stimulus`
     def step(self, stimulus, leftNode, rightNode, dt, exciteCenterOnly=False):
         I = stimulus # I[i-1]
