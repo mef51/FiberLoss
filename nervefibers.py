@@ -272,7 +272,7 @@ class AxonPositionNode:
             pylab.plot(timeLine, vSol)
 
         d = mag(self.distance, cm)
-        titleStr = "Vm of node #" + str(self.index) + ": d = " + str("{0:.2f}".format(d)) + "cm."
+        titleStr = "Vm of node #" + str(self.index) + ": d = " + str("{0:.2f}".format(d)) + "cm. "
         titleStr += "AC = " + str(self.damagedChannels)
         pylab.title(titleStr)
         pylab.legend(('V', 'Stimulus'))
@@ -608,13 +608,14 @@ def plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=False):
             print "plotting axon #" + str(node.index) + " in fiber #" + str(fiberNum) + "..."
             node.plotCurrentsVoltagesAndGates(simulation.timeLine, curr, fiberNum, plotStimulus, exciteCenterOnly)
 
-def plotCompoundPotential():
+def plotCompoundPotential(n=0):
     compoundPotential = [0 for i in range(0, int(T/dt) + 1)]
 
-    # add up the last node in each fiber. these nodes should all have the same index,
+    arrayIndex = n + int(nerve["numNodes"]/2)
+    # add up the nodes in each fiber with the same n. These nodes all have the same index,
     # but are not necessarily next to each other. They should be close though
     for fiber in nerve['fibers']:
-        node = last(fiber.axonNodes)
+        node = fiber.axonNodes[arrayIndex]
         for k, v in enumerate(node.Vm):
             compoundPotential[k] += v
 
@@ -622,7 +623,7 @@ def plotCompoundPotential():
     pylab.plot(simulation.timeLine, compoundPotential)
     pylab.xlabel('Time (ms)')
     pylab.ylabel('Voltage (mV)')
-    pylab.title('Sum of all Action Potentials at last Node')
+    pylab.title('Sum of all Action Potentials at Node n = ' + str(n))
     pylab.grid()
     pylab.savefig("graphs/sumOfPotentials.jpg")
     pylab.close()
@@ -637,7 +638,7 @@ log.logLevel = log.ERROR
 # Current Stimulus
 # threshold is ~12uA/cm^2 or 2.9e-6uA
 stimulusCurrent = {
-    "magnitude" : -100000*25.9e-6 *uA,    # uA. the current applied at the surface
+    "magnitude" : -2.59 *uA,    # uA. the current applied at the surface
     "x"         : 0   *cm,    # cm
     "y"         : 0.3 *cm,    # cm
     "z"         : 0   *cm     # cm
@@ -646,7 +647,7 @@ stimulusCurrent = {
 # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
 nerve = {
     "numFibers"    : 1,
-    "numNodes"     : 11,    # the number of axon nodes each fiber has. Should be an odd number.
+    "numNodes"     : 41,    # the number of axon nodes each fiber has. Should be an odd number.
     "fibers"       : [],
     "radius"       : 0.0    *cm, # cm
     "x"            : 0.0    *cm, # cm
@@ -656,7 +657,7 @@ nerve = {
     "maxFiberDiam" : 0.0021 *cm, # cm
     "axonalLength" : 2.5e-4 *cm, # cm
     "damageMap"       : {           # a map of node indices to the proportion of damaged channels on that node.
-        0 : 0.5,
+        11 : 1.0,
     }
 }
 
@@ -671,15 +672,15 @@ print "Placed " + str(len(nerve["fibers"])) + " fibers."
 # plotNodePositions()
 # plotCrossSectionPositions()
 
-T    = 25*ms    # ms
+T    = 55*ms    # ms
 dt   = 0.025*ms # ms
 centerOnly = False
 
 simulation = NerveBundleSimulation(T, dt)
-print "Starting simulation... Length =", str(T), "ms. Step =", str(dt), "ms."
-print "Points:", str(T/dt)
+print "Starting simulation... Length =", str(T), "ms. Step =", str(dt), "ms.", "Points:", str(T/dt)
 simulation.simulate(nerve, stimulusCurrent, exciteCenterOnly=centerOnly) # modifies `nerve`
 plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=centerOnly)
+plotCompoundPotential(n=11)
 # simulation.dumpJSON('data.json')
 
 print "Done."
