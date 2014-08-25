@@ -310,7 +310,7 @@ class NerveFiber:
     Nerve fibers are myelinated axons that have multiple connected axon nodes (areas of the axon that aren't covered
     by myelin). Axonal Length is in centimetres.
     """
-    def __init__(self, x, y, diameter, numNodes, axonalLength, damageMap):
+    def __init__(self, x, y, diameter, numNodes, axonalLength, damageMap, stimulusCurrent):
         self.x = x
         self.y = y
         self.diameter = diameter
@@ -340,14 +340,24 @@ class NerveFiber:
 
 ### Simulayshun
 class NerveBundleSimulation:
-    def __init__(self, T=55*ms, dt=0.025*ms):
+    def __init__(self, T, dt, nerve, stimulusCurrent):
         self.T = T
         self.dt = dt
         self.timeLine = np.arange(0, mag((T+dt), ms), mag(dt, ms))
-
-    def simulate(self, nerve, stimulusCurrent, exciteCenterOnly=False):
         self.nerve = nerve
         self.stimulusCurrent = stimulusCurrent
+
+        # Create and place the axons
+        print "Creating bundle of fibers..."
+        for i in range(0, nerve["numFibers"]):
+            succeeded = self.placeFiberInNerve()
+            if not succeeded:
+                break
+        print "Placed " + str(len(nerve["fibers"])) + " fibers."
+
+    def simulate(self, exciteCenterOnly=False):
+        nerve = self.nerve
+        stimulusCurrent = self.stimulusCurrent
         for t in range(1, len(self.timeLine)):
             if self.timeLine[t] % 1 == 0.0:
                 print "Simulation Time: " + str(self.timeLine[t])
@@ -379,7 +389,7 @@ class NerveBundleSimulation:
                     # step the current axon forward IN TIIIME ♪♪
                     # print "Stepping axon #" + str(k) + " in fiber #" + str(i)
                     log.info("========")
-                    log.infoVar(t*dt, 'time')
+                    log.infoVar(t*self.dt, 'time')
                     log.infoVar(axonNode.index, 'node')
                     log.infoVar(leftNode["V"], "leftVoltage")
                     log.infoVar(rightNode["V"], "rightVoltage")
@@ -438,6 +448,71 @@ class NerveBundleSimulation:
         outputFile.write(json.dumps(data))
         print "Done."
 
+    # Places a nerve fiber and makes sure it doesn't overlap with any other nerve fibers in the nerve bundle
+    # returns true if it succeeds, false otherwise
+    def placeFiberInNerve(self, maxAttempts = 1000):
+        nerve = self.nerve
+        current = self.stimulusCurrent
+        def placeFiber(maxAttempts = 1000):
+            x = random.uniform(-nerve["radius"], nerve["radius"]) + nerve["x"]
+            y = random.uniform(-nerve["radius"], nerve["radius"]) + nerve["y"]
+            diameter = random.uniform(nerve["minFiberDiam"], nerve["maxFiberDiam"])
+
+            # make sure axon is in the nerve
+            while (x**2 + y**2) > nerve["radius"]**2:
+                x = random.uniform(-nerve["radius"], nerve["radius"])
+                y = random.uniform(-nerve["radius"], nerve["radius"])
+
+            # push around and shrink the new axon until it fits
+            recheck = True
+            numRechecks = 0
+            while recheck:
+                if numRechecks > maxAttempts:
+                    print "Couldn't place " + str(nerve["numFibers"]) + " fibers after " + str(maxAttempts) + " attempts!"
+                    print "Giving up at " + str(len(nerve["fibers"])) + " fibers."
+                    return None
+
+                recheck = False
+                for k, fiber in enumerate(nerve["fibers"]):
+                    distBetweenFibers = getDistance(x, y, 0*cm, fiber.x, fiber.y, 0*cm)
+                    if distBetweenFibers < (fiber.diameter/2.0 + diameter/2.0):
+                        if distBetweenFibers < fiber.diameter/2.0 or distBetweenFibers < diameter/2.0:
+                            # fiber's center is inside another fiber. push it out
+                            # this is vector stuff
+                            direction = [mag(x - fiber.x, cm), mag(y - fiber.y, cm)]
+                            dirMag = np.sqrt(direction[0]**2 + direction[1]**2)
+                            # normalize this vector so that we can use it as a direction
+                            direction[0] = direction[0] /dirMag
+                            direction[1] = direction[1] /dirMag
+
+                            x += direction[0] * (fiber.diameter/2.0 - distBetweenFibers + diameter/2.0)
+                            y += direction[1] * (fiber.diameter/2.0 - distBetweenFibers + diameter/2.0)
+                            recheck = True
+                            numRechecks += 1
+                            break
+                        else:
+                            # fiber is too big
+                            amountToShrink = (fiber.diameter/2.0 + diameter/2.0) - distBetweenFibers
+                            diameter -= amountToShrink * 2
+
+            return NerveFiber(x, y, diameter, nerve["numNodes"], nerve["axonalLength"], nerve["damageMap"], current)
+
+        fiber = placeFiber(maxAttempts)
+        # make sure fiber isn't too big or small
+        while fiber.diameter < nerve["minFiberDiam"] or fiber.diameter > nerve["maxFiberDiam"]:
+            result = placeFiber(maxAttempts)
+            if result is None:
+                return False
+            else:
+                fiber = result
+
+        nerve["fibers"].append(fiber)
+        print nerve["fibers"][0].x, nerve["fibers"][0].y
+        print "======"
+        print self.nerve["fibers"][0].x, self.nerve["fibers"][0].y
+        print "===="
+        return True
+
 # represents a square wave current strimulus
 def getCurrent(t, current, tPulseStart=0*ms, pulseWidth=550*ms):
     if tPulseStart <= t <= (tPulseStart + pulseWidth):
@@ -450,65 +525,6 @@ def getDistance(x1, y1, z1, x2, y2, z2):
     y = abs(y1 - y2)
     z = abs(z1 - z2)
     return np.sqrt(mag((x**2 + y**2 + z**2), (cm*cm))) * (cm)
-
-# Places a nerve fiber and makes sure it doesn't overlap with any other nerve fibers in the nerve bundle
-# returns true if it succeeds, false otherwise
-def placeFiberInNerve(nerve, maxAttempts = 1000):
-    def placeFiber(maxAttempts = 1000):
-        x = random.uniform(-nerve["radius"], nerve["radius"]) + nerve["x"]
-        y = random.uniform(-nerve["radius"], nerve["radius"]) + nerve["y"]
-        diameter = random.uniform(nerve["minFiberDiam"], nerve["maxFiberDiam"])
-
-        # make sure axon is in the nerve
-        while (x**2 + y**2) > nerve["radius"]**2:
-            x = random.uniform(-nerve["radius"], nerve["radius"])
-            y = random.uniform(-nerve["radius"], nerve["radius"])
-
-        # push around and shrink the new axon until it fits
-        recheck = True
-        numRechecks = 0
-        while recheck:
-            if numRechecks > maxAttempts:
-                print "Couldn't place " + str(nerve["numFibers"]) + " fibers after " + str(maxAttempts) + " attempts!"
-                print "Giving up at " + str(len(nerve["fibers"])) + " fibers."
-                return None
-
-            recheck = False
-            for k, fiber in enumerate(nerve["fibers"]):
-                distBetweenFibers = getDistance(x, y, 0*cm, fiber.x, fiber.y, 0*cm)
-                if distBetweenFibers < (fiber.diameter/2.0 + diameter/2.0):
-                    if distBetweenFibers < fiber.diameter/2.0 or distBetweenFibers < diameter/2.0:
-                        # fiber's center is inside another fiber. push it out
-                        # this is vector stuff
-                        direction = [mag(x - fiber.x, cm), mag(y - fiber.y, cm)]
-                        dirMag = np.sqrt(direction[0]**2 + direction[1]**2)
-                        # normalize this vector so that we can use it as a direction
-                        direction[0] = direction[0] /dirMag
-                        direction[1] = direction[1] /dirMag
-
-                        x += direction[0] * (fiber.diameter/2.0 - distBetweenFibers + diameter/2.0)
-                        y += direction[1] * (fiber.diameter/2.0 - distBetweenFibers + diameter/2.0)
-                        recheck = True
-                        numRechecks += 1
-                        break
-                    else:
-                        # fiber is too big
-                        amountToShrink = (fiber.diameter/2.0 + diameter/2.0) - distBetweenFibers
-                        diameter -= amountToShrink * 2
-
-        return NerveFiber(x, y, diameter, nerve["numNodes"], nerve["axonalLength"], nerve["damageMap"])
-
-    fiber = placeFiber(maxAttempts)
-    # make sure fiber isn't too big or small
-    while fiber.diameter < nerve["minFiberDiam"] or fiber.diameter > nerve["maxFiberDiam"]:
-        result = placeFiber(maxAttempts)
-        if result is None:
-            return False
-        else:
-            fiber = result
-
-    nerve["fibers"].append(fiber)
-    return True
 
 ##########################
 # Some Plotting Functions
@@ -598,23 +614,23 @@ def plotMembranePotentialOfNodes(nerve):
             print "plotting axon #" + str(node.index) + " in fiber #" + str(i) + "..."
             plotMembranePotential(curr, node, i)
 
-def plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=False):
+def plotInfoOfNodes(simulation, plotStimulus=True, exciteCenterOnly=False):
     curr = []
     for j in range(0, len(simulation.timeLine)):
-        curr.append(getCurrent(j*dt, stimulusCurrent["magnitude"]))
+        curr.append(getCurrent(j*simulation.dt, simulation.stimulusCurrent["magnitude"]))
 
-    for fiberNum, fiber in enumerate(nerve["fibers"]):
+    for fiberNum, fiber in enumerate(simulation.nerve["fibers"]):
         for k, node in enumerate(fiber.axonNodes):
             print "plotting axon #" + str(node.index) + " in fiber #" + str(fiberNum) + "..."
             node.plotCurrentsVoltagesAndGates(simulation.timeLine, curr, fiberNum, plotStimulus, exciteCenterOnly)
 
-def plotCompoundPotential(n=0):
-    compoundPotential = [0 for i in range(0, int(T/dt) + 1)]
+def plotCompoundPotential(simulation, n=0):
+    compoundPotential = [0 for i in range(0, int(simulation.T/simulation.dt) + 1)]
 
-    arrayIndex = n + int(nerve["numNodes"]/2)
+    arrayIndex = n + int(simulation.nerve["numNodes"]/2)
     # add up the nodes in each fiber with the same n. These nodes all have the same index,
     # but are not necessarily next to each other. They should be close though
-    for fiber in nerve['fibers']:
+    for fiber in simulation.nerve['fibers']:
         node = fiber.axonNodes[arrayIndex]
         for k, v in enumerate(node.Vm):
             compoundPotential[k] += v
@@ -631,56 +647,51 @@ def plotCompoundPotential(n=0):
 ##############
 # Start Script
 ##############
+def main():
+    log.logLevel = log.ERROR
+    # log.logLevel = log.INFO
 
-log.logLevel = log.ERROR
-# log.logLevel = log.INFO
-
-# Current Stimulus
-# threshold is ~12uA/cm^2 or 2.9e-6uA
-stimulusCurrent = {
-    "magnitude" : -2.59 *uA,    # uA. the current applied at the surface
-    "x"         : 0   *cm,    # cm
-    "y"         : 0.3 *cm,    # cm
-    "z"         : 0   *cm     # cm
-}
-
-# the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
-nerve = {
-    "numFibers"    : 1,
-    "numNodes"     : 41,    # the number of axon nodes each fiber has. Should be an odd number.
-    "fibers"       : [],
-    "radius"       : 0.0    *cm, # cm
-    "x"            : 0.0    *cm, # cm
-    "y"            : 0.0    *cm, # cm
-    "z"            : 0.0    *cm, # cm
-    "minFiberDiam" : 0.0019 *cm, # cm
-    "maxFiberDiam" : 0.0021 *cm, # cm
-    "axonalLength" : 2.5e-4 *cm, # cm
-    "damageMap"       : {           # a map of node indices to the proportion of damaged channels on that node.
-        11 : 1.0,
+    # Current Stimulus
+    # threshold is ~12uA/cm^2 or 2.9e-6uA
+    stimulusCurrent = {
+        "magnitude" : -2.59 *uA,    # uA. the current applied at the surface
+        "x"         : 0   *cm,    # cm
+        "y"         : 0.3 *cm,    # cm
+        "z"         : 0   *cm     # cm
     }
-}
 
-# Create and place the axons
-print "Creating bundle of fibers..."
-for i in range(0, nerve["numFibers"]):
-    succeeded = placeFiberInNerve(nerve)
-    if not succeeded:
-        break
-print "Placed " + str(len(nerve["fibers"])) + " fibers."
+    # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
+    nerve = {
+        "numFibers"    : 1,
+        "numNodes"     : 41,    # the number of axon nodes each fiber has. Should be an odd number.
+        "fibers"       : [],
+        "radius"       : 0.0    *cm, # cm
+        "x"            : 0.0    *cm, # cm
+        "y"            : 0.0    *cm, # cm
+        "z"            : 0.0    *cm, # cm
+        "minFiberDiam" : 0.0019 *cm, # cm
+        "maxFiberDiam" : 0.0021 *cm, # cm
+        "axonalLength" : 2.5e-4 *cm, # cm
+        "damageMap"       : {           # a map of node indices to the proportion of damaged channels on that node.
+            11 : 1.0,
+        }
+    }
 
-# plotNodePositions()
-# plotCrossSectionPositions()
+    # plotNodePositions()
+    # plotCrossSectionPositions()
 
-T    = 55*ms    # ms
-dt   = 0.025*ms # ms
-centerOnly = False
+    T    = 55*ms    # ms
+    dt   = 0.025*ms # ms
+    centerOnly = False
 
-simulation = NerveBundleSimulation(T, dt)
-print "Starting simulation... Length =", str(T), "ms. Step =", str(dt), "ms.", "Points:", str(T/dt)
-simulation.simulate(nerve, stimulusCurrent, exciteCenterOnly=centerOnly) # modifies `nerve`
-plotInfoOfNodes(nerve, plotStimulus=True, exciteCenterOnly=centerOnly)
-plotCompoundPotential(n=11)
-# simulation.dumpJSON('data.json')
+    simulation = NerveBundleSimulation(T, dt, nerve, stimulusCurrent)
+    print "Starting simulation... Length =", str(T), "ms. Step =", str(dt), "ms.", "Points:", str(T/dt)
+    simulation.simulate(exciteCenterOnly=centerOnly) # modifies `nerve`
+    plotInfoOfNodes(simulation, plotStimulus=True, exciteCenterOnly=centerOnly)
+    plotCompoundPotential(simulation, n=11)
+    # simulation.dumpJSON('data.json')
 
-print "Done."
+    print "Done."
+
+if  __name__ =='__main__':
+    main()
