@@ -6,6 +6,7 @@ import numpy as np
 import pylab
 import random
 import log
+import argparse
 
 USE_UNITS = False
 
@@ -507,10 +508,6 @@ class NerveBundleSimulation:
                 fiber = result
 
         nerve["fibers"].append(fiber)
-        print nerve["fibers"][0].x, nerve["fibers"][0].y
-        print "======"
-        print self.nerve["fibers"][0].x, self.nerve["fibers"][0].y
-        print "===="
         return True
 
 # represents a square wave current strimulus
@@ -651,6 +648,16 @@ def main():
     log.logLevel = log.ERROR
     # log.logLevel = log.INFO
 
+    # parse arguments
+    parser = argparse.ArgumentParser(description="Nerve Fiber Loss Simulation Tool",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--numfibers', default=1, type=int, help='the number of neuron fibers to simulate')
+    parser.add_argument('--numnodes', default=11, type=int, help='the number of axon nodes in each fiber to simulate')
+    parser.add_argument('--time', default=55, type=float, help='the amount of time to simulate in ms')
+    parser.add_argument('--dt', default=0.025, type=float, help='the time step to use')
+
+    args = parser.parse_args()
+
     # Current Stimulus
     # threshold is ~12uA/cm^2 or 2.9e-6uA
     stimulusCurrent = {
@@ -662,8 +669,8 @@ def main():
 
     # the nerve is a bundle of nerve fibers. Nerve fibers are rods of connected axons.
     nerve = {
-        "numFibers"    : 1,
-        "numNodes"     : 41,    # the number of axon nodes each fiber has. Should be an odd number.
+        "numFibers"    : args.numfibers,
+        "numNodes"     : args.numnodes,    # the number of axon nodes each fiber has. Should be an odd number.
         "fibers"       : [],
         "radius"       : 0.0    *cm, # cm
         "x"            : 0.0    *cm, # cm
@@ -680,12 +687,13 @@ def main():
     # plotNodePositions()
     # plotCrossSectionPositions()
 
-    T    = 55*ms    # ms
-    dt   = 0.025*ms # ms
+    T    = args.time*ms    # ms
+    dt   = args.dt*ms # ms
     centerOnly = False
 
     simulation = NerveBundleSimulation(T, dt, nerve, stimulusCurrent)
     print "Starting simulation... Length =", str(T), "ms. Step =", str(dt), "ms.", "Points:", str(T/dt)
+    print "numFibers =", str(nerve["numFibers"]), "numNodes =", str(nerve["numNodes"])
     simulation.simulate(exciteCenterOnly=centerOnly) # modifies `nerve`
     plotInfoOfNodes(simulation, plotStimulus=True, exciteCenterOnly=centerOnly)
     plotCompoundPotential(simulation, n=11)
