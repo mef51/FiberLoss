@@ -1,6 +1,6 @@
 Fiber Loss in Nerves
 ====================
-Big Write-up: https://github.com/mef51/neuro-report/blob/master/neuroReport.pdf?raw=true
+Larger Write-up: https://github.com/mef51/neuro-report/blob/master/neuroReport.pdf?raw=true
 
 People who suffer from diseases that cause nerve fiber loss often don't realize what's happening because it happens so slowly.
 Tests and experiments can be done where you measure how far a signal travels down a limb from a certain stimulus. The more damage there is, the less the signal travels.
@@ -11,13 +11,13 @@ This simulation is inspired by a mathematical model that gives some clues as to 
 
 The goal of the simulation is to recreate results from the experiment described above using the mathematical model.
 
-Status: Creates virtual nerve fibers, generates action potentials, and propagats to connected nodes
+Status: Working, usable, simulation model. Produces and propagates nerve signal spikes.
 ====================
 
-* Creates a bundle of fibers, where each fiber is a group of connected nodes.
+* Creates a bundle of fibers, where each fiber is a group of connected axon nodes.
 * Places a stimulus some distance away from the bundle.
-* Can simulate the response of each node to the axon. Axons affect each other, and can potentially trigger propagating action potentials.
-* Can plot various things about the system, including positions, membrane voltages, and forward and backward rates.
+* Simulates the response of each node to the axon. Axons affect each other, and can potentially trigger propagating action potentials.
+* Plots various things about the system, including positions, membrane voltages, and forward and backward rates.
 
 Papers
 ======
