@@ -7,6 +7,7 @@ import pylab
 import random
 import log
 import argparse
+import os
 
 USE_UNITS = False
 
@@ -229,7 +230,7 @@ class AxonPositionNode:
         pylab.title('Alpha and Beta Functions')
         pylab.ylabel(u'Rate Constant (ms^-1)')
         pylab.xlabel('Voltage (mV)')
-        pylab.savefig('alphaBetaFunctions.jpg')
+        saveFigure('alphaBetaFunctions.jpg')
 
     def plotSteadyStateActivations(self):
         v = np.arange(-150, 50) # millivolts
@@ -241,7 +242,7 @@ class AxonPositionNode:
         pylab.title('Steady state values of ion channel gating variables')
         pylab.ylabel('Magnitude')
         pylab.xlabel('Voltage (mV)')
-        pylab.savefig("mhn.jpg")
+        saveFigure("mhn.jpg")
 
     def plotCurrentsVoltagesAndGates(self, timeLine, stimulusCurrent, fiberNum, plotStimulus=True, exciteCenterOnly=False):
         vSol, mSol, hSol, nSol, mLSSol, hLSSol = self.Vm, self.m, self.h, self.n, self.mLS, self.hLS
@@ -303,7 +304,7 @@ class AxonPositionNode:
         pylab.grid()
 
         pylab.tight_layout()
-        pylab.savefig("graphs/axons/axon" + str(self.index) + "fiber" + str(fiberNum) + ".jpg")
+        saveFigure("graphs/axons/axon" + str(self.index) + "fiber" + str(fiberNum) + ".jpg")
         pylab.close()
 
 class NerveFiber:
@@ -526,6 +527,15 @@ def getDistance(x1, y1, z1, x2, y2, z2):
 ##########################
 # Some Plotting Functions
 ##########################
+# Checks if the destination directory exists and creates it if it doesn't.
+# Use instead of `saveFigure`.
+# I only tested it with paths/that/look/like/this.jpg
+def saveFigure(path):
+    folders = path.split('/')[:len(path.split('/'))-1]
+    folderPath = "/".join(folders)
+    if not os.path.isdir(folderPath):
+        os.makedirs(folderPath)
+    pylab.savefig(path)
 
 def plotNodePositions(plotIndices=True):
     pylab.figure()
@@ -585,7 +595,7 @@ def plotMembranePotential(current, node, fiberNum, showFigure=False):
     pylab.title('Axon #' + str(node.index) + ": Distance = " + str(node.distance) + " cm")
     pylab.ylabel('Membrane Potential (mV)')
     pylab.xlabel('Time (msec)')
-    pylab.savefig("graphs/axons/axon" + str(node.index) + "fiber" + str(fiberNum) + ".jpg")
+    saveFigure("graphs/axons/axon" + str(node.index) + "fiber" + str(fiberNum) + ".jpg")
     if showFigure:
         pylab.show()
     pylab.close()
@@ -638,7 +648,7 @@ def plotCompoundPotential(simulation, n=0):
     pylab.ylabel('Voltage (mV)')
     pylab.title('Sum of all Action Potentials at Node n = ' + str(n))
     pylab.grid()
-    pylab.savefig("graphs/sumOfPotentials.jpg")
+    saveFigure("graphs/sumOfPotentials.jpg")
     pylab.close()
 
 ##############
